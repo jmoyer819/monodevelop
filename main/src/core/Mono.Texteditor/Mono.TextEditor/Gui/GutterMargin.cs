@@ -98,7 +98,7 @@ namespace Mono.TextEditor
 			}
 		}
 		
-		public override double Width {
+		public override double WidthRequest {
 			get {
 				return width;
 			}

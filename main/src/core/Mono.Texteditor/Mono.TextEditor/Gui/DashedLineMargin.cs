@@ -33,7 +33,7 @@ namespace Mono.TextEditor
 		TextEditor editor;
 		Cairo.Color color;
 		
-		public override double Width {
+		public override double WidthRequest {
 			get {
 				return System.Math.Min (1.0, editor.Options.Zoom);
 			}

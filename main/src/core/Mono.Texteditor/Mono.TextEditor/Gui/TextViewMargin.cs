@@ -57,21 +57,8 @@ namespace Mono.TextEditor
 			}
 		}
 
-		public override double Width { 
+		public override double WidthRequest {
 			get { return -1; }
-		}
-
-		double xOffset;
-
-		public override double XOffset {
-			get {
-				return xOffset;
-			}
-			internal set {
-				if (xOffset != value) {
-					xOffset = value;
-				}
-			}
 		}
 
 		public bool AlphaBlendSearchResults {

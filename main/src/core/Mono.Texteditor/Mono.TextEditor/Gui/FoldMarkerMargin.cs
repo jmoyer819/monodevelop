@@ -41,7 +41,7 @@ namespace Mono.TextEditor
 		
 		double foldSegmentSize = 8;
 		double marginWidth;
-		public override double Width {
+		public override double WidthRequest {
 			get {
 				return marginWidth;
 			}

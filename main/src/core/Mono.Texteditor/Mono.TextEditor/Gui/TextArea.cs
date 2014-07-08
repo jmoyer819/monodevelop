@@ -336,6 +336,8 @@ namespace Mono.TextEditor
 			this.textEditorData.UpdateAdjustmentsRequested += TextEditorDatahandleUpdateAdjustmentsRequested;
 			Document.DocumentUpdated += DocumentUpdatedHandler;
 			
+			UpdateMarginGeometry ();
+
 			this.textEditorData.Options.Changed += OptionsChanged;
 			
 			
@@ -803,7 +805,7 @@ namespace Mono.TextEditor
 		{
 			if (isDisposed)
 				return;
-			QueueDrawArea ((int)margin.XOffset, 0, GetMarginWidth (margin),  this.Allocation.Height);
+			QueueDrawArea ((int)margin.XOffset, 0, (int)margin.Width, this.Allocation.Height);
 		}
 		
 		public void RedrawMarginLine (Margin margin, int logicalLine)
@@ -815,14 +817,7 @@ namespace Mono.TextEditor
 			double h = GetLineHeight (logicalLine);
 			
 			if (y + h > 0)
-				QueueDrawArea ((int)margin.XOffset, (int)y, (int)GetMarginWidth (margin), (int)h);
-		}
-
-		int GetMarginWidth (Margin margin)
-		{
-			if (margin.Width < 0)
-				return Allocation.Width - (int)margin.XOffset;
-			return (int)margin.Width;
+				QueueDrawArea ((int)margin.XOffset, (int)y, (int)margin.Width, (int)h);
 		}
 		
 		internal void RedrawLine (int logicalLine)
@@ -872,7 +867,7 @@ namespace Mono.TextEditor
 			if (end < 0)
 				end = Document.LineCount;
 			double visualEnd   = -this.textEditorData.VAdjustment.Value + LineToY (end) + GetLineHeight (end);
-			QueueDrawArea ((int)margin.XOffset, (int)visualStart, GetMarginWidth (margin), (int)(visualEnd - visualStart));
+			QueueDrawArea ((int)margin.XOffset, (int)visualStart, (int)margin.Width, (int)(visualEnd - visualStart));
 		}
 			
 		internal void RedrawLines (int start, int end)
@@ -1722,14 +1717,35 @@ namespace Mono.TextEditor
 			return this.textViewMargin.GetWidth (text);
 		}
 		
-		void UpdateMarginXOffsets ()
+		void UpdateMarginGeometry ()
 		{
-			double curX = 0;
-			foreach (Margin margin in this.margins) {
+			var variableWidthMarginCount = 0;
+			var variableAllocatedMarginWidth = Allocation.Width;
+
+			foreach (var margin in margins) {
 				if (!margin.IsVisible)
 					continue;
-				margin.XOffset = curX;
-				curX += margin.Width;
+
+				if (margin.WidthRequest < 0)
+					variableWidthMarginCount++;
+				else
+					variableAllocatedMarginWidth -= (int)margin.WidthRequest;
+			}
+
+			variableAllocatedMarginWidth /= variableWidthMarginCount;
+
+			var xoffset = 0.0;
+
+			foreach (var margin in margins) {
+				if (!margin.IsVisible)
+					continue;
+
+				margin.Width = margin.WidthRequest;
+				if (margin.Width < 0)
+					margin.Width = variableAllocatedMarginWidth;
+
+				margin.XOffset = xoffset;
+				xoffset += margin.Width;
 			}
 		}
 		
@@ -1823,7 +1839,7 @@ namespace Mono.TextEditor
 			var cairoArea = new Cairo.Rectangle (area.X, area.Y, area.Width, area.Height);
 			using (Cairo.Context cr = Gdk.CairoHelper.Create (e.Window))
 			using (Cairo.Context textViewCr = Gdk.CairoHelper.Create (e.Window)) {
-				UpdateMarginXOffsets ();
+				UpdateMarginGeometry ();
 				
 				cr.LineWidth = Options.Zoom;
 				textViewCr.LineWidth = Options.Zoom;
@@ -2991,9 +3007,21 @@ namespace Mono.TextEditor
 		public void InsertMargin (int index, Margin margin)
 		{
 			margins.Insert (index, margin);
+			UpdateMarginGeometry ();
 			RedrawFromLine (0);
 		}
 		
+		/// <summary>
+		/// Inserts a margin after the specified margin
+		/// </summary>
+		public void InsertMargin (Margin margin, Margin afterMargin)
+		{
+			var index = margins.IndexOf (afterMargin);
+			if (index < 0)
+				throw new Exception ("afterMargin not found");
+			InsertMargin (index + 1, margin);
+		}
+
 		/// <summary>
 		/// Checks whether the editor has a margin of a given type
 		/// </summary>

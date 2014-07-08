@@ -32,18 +32,28 @@ namespace Mono.TextEditor
 {
 	public abstract class Margin : IDisposable
 	{
-		public abstract double Width {
-			get;
-		}
-		
 		public bool IsVisible { get; set; }
-		
-		// set by the text editor
-		public virtual double XOffset {
-			get;
-			internal set;
-		}
-		
+
+		/// <summary>
+		/// Get the requested width of the margin. A negative number
+		/// indicates the margin should fill variable space in the
+		/// editor.
+		/// </summary>
+		public abstract double WidthRequest { get; }
+
+		/// <summary>
+		/// The actual computed width of the margin, to be used
+		/// for rendering and input calculations.
+		/// </summary>
+		public double Width { get; internal set; }
+
+		/// <summary>
+		/// The computed X-offset of the margin in the editor,
+		/// to be used for rendering and input calculations.
+		/// </summary>
+		/// <value>The X offset.</value>
+		public double XOffset { get; internal set; }
+
 		protected Gdk.Cursor cursor = null;
 		
 		public Gdk.Cursor MarginCursor {
