@@ -1333,7 +1333,7 @@ namespace Mono.TextEditor
 		}
 
 		ChunkStyle selectionColor;
-		ChunkStyle SelectionColor {
+		public ChunkStyle SelectionColor {
 			get {
 				if (selectionColor == null)
 					selectionColor = textEditor.HasFocus ? ColorStyle.SelectedText : ColorStyle.SelectedInactiveText;
@@ -1342,7 +1342,7 @@ namespace Mono.TextEditor
 		}
 
 		AmbientColor currentLineColor;
-		AmbientColor CurrentLineColor {
+		public AmbientColor CurrentLineColor {
 			get {
 				if (currentLineColor == null)
 					currentLineColor = textEditor.HasFocus ? ColorStyle.LineMarker : ColorStyle.LineMarkerInactive;
