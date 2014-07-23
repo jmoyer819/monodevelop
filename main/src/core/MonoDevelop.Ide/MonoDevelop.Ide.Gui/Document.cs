@@ -417,7 +417,6 @@ namespace MonoDevelop.Ide.Gui
 					Encoding = encoding,
 					ShowEncodingSelector = (tbuffer != null),
 				};
-				
 				if (Window.ViewContent.IsUntitled)
 					dlg.InitialFileName = Window.ViewContent.UntitledName;
 				else {
