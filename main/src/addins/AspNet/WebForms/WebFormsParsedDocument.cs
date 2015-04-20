@@ -35,6 +35,7 @@ using MonoDevelop.AspNet.Projects;
 using MonoDevelop.AspNet.WebForms.Dom;
 using MonoDevelop.Ide.Editor;
 using System.Linq;
+using MonoDevelop.Ide.Editor.Projection;
 
 namespace MonoDevelop.AspNet.WebForms
 {
@@ -52,6 +53,17 @@ namespace MonoDevelop.AspNet.WebForms
 		
 		public WebFormsPageInfo Info { get; private set; }
 		public WebSubtype Type { get; private set; }
+
+		List<Projection> projections = new List<Projection> ();
+
+		public IReadOnlyList<Projection> Projections {
+			get { return projections; }
+		}
+
+		public void UpdateProjections (IEnumerable<Projection> updatedProjections)
+		{
+			this.projections = updatedProjections.ToList ();
+		}
 
 		public override System.Threading.Tasks.Task<IReadOnlyList<FoldingRegion>> GetFoldingsAsync (System.Threading.CancellationToken cancellationToken)
 		{

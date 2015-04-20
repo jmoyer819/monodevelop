@@ -104,7 +104,7 @@ namespace MonoDevelop.AspNet.WebForms
 			}
 
 			if (HasDoc) {
-				documentInfo = new DocumentInfo (aspDoc, refman.GetUsings ());
+//				documentInfo = new DocumentInfo (aspDoc, refman.GetUsings ());
 //				localDocumentProjection = new MonoDevelop.AspNet.WebForms.CSharp.CSharpProjector ().CreateProjection (documentInfo, Editor, true).Result;
 //				projectedEditor = localDocumentProjection.CreateProjectedEditor (DocumentContext);
 //				Editor.SetOrUpdateProjections (DocumentContext, new [] { localDocumentProjection  });
@@ -304,22 +304,24 @@ namespace MonoDevelop.AspNet.WebForms
 			bool isAspExprState = Tracker.Engine.CurrentState is WebFormsExpressionState;
 			if (documentBuilder == null || !isAspExprState)
 				return base.KeyPress (descriptor);
-			InitializeCodeCompletion ('\0');
+			return base.KeyPress (descriptor);
+//			InitializeCodeCompletion ('\0');
 //			DocumentContext = localDocumentInfo.HiddenDocument;
 //			Editor = localDocumentInfo.HiddenDocument.Editor;
 //			CompletionWidget = documentBuilder.CreateCompletionWidget (localDocumentInfo.HiddenDocument.Editor, localDocumentInfo.HiddenDocument, localDocumentInfo);
-			bool result;
-			try {
-				result = base.KeyPress (descriptor);
-				if (PropertyService.Get ("EnableParameterInsight", true) && (descriptor.KeyChar == ',' || descriptor.KeyChar == ')') && CanRunParameterCompletionCommand ()) {
-					RunParameterCompletionCommand ();
-				}
-			} finally {
-				DocumentContext = defaultDocumentContext;
-				Editor = defaultEditor;
-				CompletionWidget = defaultCompletionWidget;
-			}
-			return result;
+//			bool result;
+//			try {
+//				result = base.KeyPress (descriptor);
+//				if (PropertyService.Get ("EnableParameterInsight", true) && (descriptor.KeyChar == ',' || descriptor.KeyChar == ')') && CanRunParameterCompletionCommand ()) {
+//					RunParameterCompletionCommand ();
+//				}
+//			} finally {
+//				DocumentContext = defaultDocumentContext;
+//				Editor = defaultEditor;
+//				CompletionWidget = defaultCompletionWidget;
+//			}
+//
+//			return result;
 		}
 
 // TODO: Roslyn port

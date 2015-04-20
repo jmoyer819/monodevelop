@@ -29,6 +29,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 using MonoDevelop.Core;
 using MonoDevelop.Ide.TypeSystem;
@@ -39,6 +42,9 @@ using MonoDevelop.AspNet.Projects;
 using MonoDevelop.AspNet.WebForms.Parser;
 using MonoDevelop.Ide.Editor;
 using MonoDevelop.Core.Text;
+using MonoDevelop.Ide.Editor.Projection;
+using MonoDevelop.AspNet.WebForms.CSharp;
+using MonoDevelop.Ide.Editor.Util;
 
 namespace MonoDevelop.AspNet.WebForms
 {
@@ -82,6 +88,67 @@ namespace MonoDevelop.AspNet.WebForms
 			result.AddRange (errors);
 			
 			return System.Threading.Tasks.Task.FromResult((ParsedDocument)result);
+		}
+
+		public override bool CanGenerateProjection (string mimeType, string buildAction, string[] supportedLanguages)
+		{
+			// TODO: Check mimeType and languages.
+			return true;
+		}
+
+		public override Task<IReadOnlyList<Projection>> GenerateProjections (ParseOptions options, CancellationToken cancellationToken)
+		{
+			var task = GenerateParsedDocumentProjection (options, cancellationToken);
+			return Task.FromResult (task.Result.Projections);
+		}
+
+		public override Task<ParsedDocumentProjection> GenerateParsedDocumentProjection (ParseOptions options, CancellationToken cancellationToken)
+		{
+			var parsedDocument = Parse (options, cancellationToken).Result as WebFormsParsedDocument;
+			var documentInfo = new DocumentInfo (parsedDocument, GetUsings ());
+			var document = SimpleReadonlyDocument.CreateReadonlyDocumentAsync (options.Content, options.FileName, "", cancellationToken).Result;
+			var projection = new CSharpProjector ().CreateProjection (documentInfo, document, true).Result;
+			var projections = new List<Projection> ();
+			projections.Add (projection);
+			parsedDocument.UpdateProjections (projections);
+			var parsedDocumentProjection = new ParsedDocumentProjection (parsedDocument, projections);
+			return Task.FromResult (parsedDocumentProjection);
+		}
+
+		public override Task<IReadOnlyList<Projection>> GetPartialProjectionsAsync (DocumentContext ctx, TextEditor editor, ParsedDocument currentParsedDocument, CancellationToken cancellationToken)
+		{
+//			var documentInfo = new DocumentInfo ((WebFormsParsedDocument)currentParsedDocument, GetUsings ());
+//			var projection = new CSharpProjector ().CreateProjection (documentInfo, editor, true).Result;
+//			projection.CreateProjectedEditor (ctx);
+//			var projections = new List<Projection> ();
+//			projections.Add (projection);
+//			return Task.FromResult ((IReadOnlyList<Projection>)projections);
+			var webFormsParsedDocument = (WebFormsParsedDocument)currentParsedDocument;
+			return Task.FromResult (webFormsParsedDocument.Projections);
+		}
+
+		// HACk: Hard coded usings for now.
+		static IEnumerable<string> GetUsings ()
+		{
+			return new [] {
+				"System",
+				"System.Web",
+				"System",
+				"System.Collections",
+				"System.Collections.Specialized",
+				"System.Configuration",
+				"System.Text",
+				"System.Text.RegularExpressions",
+				"System.Web",
+				"System.Web.Caching",
+				"System.Web.Profile",
+				"System.Web.Security",
+				"System.Web.SessionState",
+				"System.Web.UI",
+				"System.Web.UI.HtmlControls",
+				"System.Web.UI.WebControls",
+				"System.Web.UI.WebControls.WebParts"
+			};
 		}
 	}
 }

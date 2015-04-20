@@ -179,6 +179,7 @@ namespace MonoDevelop.Ide.Editor.Projection
 
 		protected override void Initialize ()
 		{
+			CompletionWidget = completionTextEditorExtension.CompletionWidget;
 		}
 
 		public override void Dispose ()
