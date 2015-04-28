@@ -296,7 +296,7 @@ namespace MonoDevelop.Xml.Editor
 			if (currentChar == '&' && (tracker.Engine.CurrentState is XmlRootState ||
 			                           tracker.Engine.CurrentState is XmlAttributeValueState))
 			{
-				var list = new CompletionDataList ();
+				var list = CreateCompletionDataList ();
 				
 				//TODO: need to tweak semicolon insertion
 				list.Add ("apos").Description = "'";
@@ -390,14 +390,14 @@ namespace MonoDevelop.Xml.Editor
 			//element completion
 			if (currentChar == '<' && tracker.Engine.CurrentState is XmlRootState ||
 				(tracker.Engine.CurrentState is XmlNameState && forced)) {
-				var list = new CompletionDataList ();
+				var list = CreateCompletionDataList ();
 				GetElementCompletions (list);
 				AddCloseTag (list, Tracker.Engine.Nodes);
 				return Task.FromResult ((ICompletionDataList)(list.Count > 0? list : null));
 			}
 
 			if (forced && Tracker.Engine.CurrentState is XmlRootState) {
-				var list = new CompletionDataList ();
+				var list = CreateCompletionDataList ();
 				MonoDevelop.Ide.CodeTemplates.CodeTemplateService.AddCompletionDataForFileName (DocumentContext.Name, list);
 				return Task.FromResult ((ICompletionDataList)(list.Count > 0? list : null));
 			}
@@ -405,7 +405,12 @@ namespace MonoDevelop.Xml.Editor
 			return null;
 		}
 
-
+		protected CompletionDataList CreateCompletionDataList ()
+		{
+			var list = new CompletionDataList ();
+			list.AddKeyHandler (new XmlCompletionKeyHandler ());
+			return list;
+		}
 
 		protected virtual ICompletionDataList ClosingTagCompletion (TextEditor buf, DocumentLocation currentLocation)
 
@@ -455,7 +460,7 @@ namespace MonoDevelop.Xml.Editor
 
 				} else {
 
-					var cp = new CompletionDataList ();
+					var cp = CreateCompletionDataList ();
 
 					cp.Add (new XmlTagCompletionData (tag, 0, true));
 

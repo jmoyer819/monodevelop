@@ -162,7 +162,7 @@ namespace MonoDevelop.AspNet.WebForms
 			
 			//non-xml tag completion
 			if (currentChar == '<' && !(isAspExprState || Tracker.Engine.CurrentState is XmlRootState)) {
-				var list = new CompletionDataList ();
+				var list = CreateCompletionDataList ();
 				AddAspBeginExpressions (list);
 				return Task.FromResult ((ICompletionDataList)list);
 			}

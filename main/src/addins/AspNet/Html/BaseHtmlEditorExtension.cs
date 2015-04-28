@@ -107,9 +107,11 @@ namespace MonoDevelop.AspNet.Html
 		
 		protected override CompletionDataList GetDocTypeCompletions ()
 		{
-			return new CompletionDataList (from DocTypeCompletionData dat
-			                               in HtmlSchemaService.DocTypeCompletionData
-			                               select (CompletionData) dat);
+			var list = CreateCompletionDataList ();
+			list.AddRange (from DocTypeCompletionData dat
+			               in HtmlSchemaService.DocTypeCompletionData
+			               select (CompletionData) dat);
+			return list;
 		}
 		
 		protected override CompletionDataList GetAttributeCompletions (IAttributedXObject attributedOb,
