@@ -66,21 +66,29 @@ namespace MonoDevelop.Components.AutoTest
 			}
 
 			MonoDevelop.Core.Execution.RemotingService.RegisterRemotingChannel ();
-
 			BinaryFormatter bf = new BinaryFormatter ();
 			ObjRef oref = RemotingServices.Marshal (this);
 			MemoryStream ms = new MemoryStream ();
 			bf.Serialize (ms, oref);
 			string sref = Convert.ToBase64String (ms.ToArray ());
-
-			var pi = new ProcessStartInfo (file, args) { UseShellExecute = false };
+			var pi = new ProcessStartInfo (file, args) { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true, RedirectStandardInput = true };
 			pi.EnvironmentVariables ["MONO_AUTOTEST_CLIENT"] = sref;
 			pi.EnvironmentVariables ["GTK_MODULES"] = "gail:atk-bridge";
 			if (environment != null)
 				foreach (var e in environment)
 					pi.EnvironmentVariables [e.Key] = e.Value;
 
-			process = Process.Start (pi);
+			process = new Process ();
+			process.StartInfo = pi;
+			process.ErrorDataReceived += (sender, e) => Console.WriteLine ("{0}", e.Data);
+			process.OutputDataReceived += (sender, e) => Console.WriteLine ("{0}", e.Data);
+
+			if (!process.Start ()) {
+				throw new Exception ("Could not start application");
+			}
+
+			process.BeginErrorReadLine ();
+			process.BeginOutputReadLine ();
 
 			if (!waitEvent.WaitOne (15000)) {
 				try {
@@ -222,6 +230,7 @@ namespace MonoDevelop.Components.AutoTest
 
 		void IAutoTestClient.Connect (AutoTestSession session)
 		{
+			Console.WriteLine ("Application connected");
 			this.session = session;
 			waitEvent.Set ();
 		}

@@ -44,6 +44,7 @@ namespace UserInterfaceTests
 				{ "MONODEVELOP_TEST_PROFILE", Util.CreateTmpDir ("profile") }
 			});
 
+			Console.WriteLine ("Application started - turning on InstrumentationService");
 			Session.SetGlobalValue ("MonoDevelop.Core.Instrumentation.InstrumentationService.Enabled", true);
 			Session.GlobalInvoke ("MonoDevelop.Ide.IdeApp.Workbench.GrabDesktopFocus");
 		}
