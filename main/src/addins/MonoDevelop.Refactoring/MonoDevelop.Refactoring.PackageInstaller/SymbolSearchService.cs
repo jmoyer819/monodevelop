@@ -1,4 +1,4 @@
-﻿//
+//
 // PackageInstallerService.cs
 //
 // Author:
@@ -42,8 +42,7 @@ namespace MonoDevelop.Refactoring.PackageInstaller
 	[ExportWorkspaceService (typeof (ISymbolSearchService), ServiceLayer.Host), Shared]
 	class SymbolSearchService : ISymbolSearchService
 	{
-
-		async Task<ImmutableArray<PackageWithAssemblyResult>> ISymbolSearchService.FindPackagesWithAssemblyAsync (string source, string assemblyName, CancellationToken cancellationToken)
+		async Task<IList<PackageWithAssemblyResult>> ISymbolSearchService.FindPackagesWithAssemblyAsync (string source, string assemblyName, CancellationToken cancellationToken)
 		{
 			if (PackageInstallerServiceFactory.PackageServices == null)
 				return ImmutableArray<PackageWithAssemblyResult>.Empty;
@@ -54,7 +53,7 @@ namespace MonoDevelop.Refactoring.PackageInstaller
 			return result.ToImmutableArray ();
 		}
 
-		async Task<ImmutableArray<PackageWithTypeResult>> ISymbolSearchService.FindPackagesWithTypeAsync (string source, string name, int arity, CancellationToken cancellationToken)
+		async Task<IList<PackageWithTypeResult>> ISymbolSearchService.FindPackagesWithTypeAsync (string source, string name, int arity, CancellationToken cancellationToken)
 		{
 			if (PackageInstallerServiceFactory.PackageServices == null)
 				return ImmutableArray<PackageWithTypeResult>.Empty;
@@ -66,7 +65,7 @@ namespace MonoDevelop.Refactoring.PackageInstaller
 			return result.ToImmutableArray ();
 		}
 
-		async Task<ImmutableArray<ReferenceAssemblyWithTypeResult>> ISymbolSearchService.FindReferenceAssembliesWithTypeAsync (string name, int arity, CancellationToken cancellationToken)
+		async Task<IList<ReferenceAssemblyWithTypeResult>> ISymbolSearchService.FindReferenceAssembliesWithTypeAsync (string name, int arity, CancellationToken cancellationToken)
 		{
 			if (PackageInstallerServiceFactory.PackageServices == null)
 				return ImmutableArray<ReferenceAssemblyWithTypeResult>.Empty;
