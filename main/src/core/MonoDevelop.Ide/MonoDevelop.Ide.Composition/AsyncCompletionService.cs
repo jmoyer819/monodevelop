@@ -9,7 +9,7 @@ using Microsoft.CodeAnalysis.Editor.Implementation.IntelliSense.Completion;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Editor;
 
-namespace MonoDevelop.Ide.MonoDevelop.Ide.Composition
+namespace MonoDevelop.Ide.Composition
 {
 	[Export(typeof(IAsyncCompletionService))]
 	class AsyncCompletionService : IAsyncCompletionService
