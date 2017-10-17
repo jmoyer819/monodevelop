@@ -26,6 +26,7 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text.Editor;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using MonoDevelop.Ide.Composition;
 
 namespace Microsoft.VisualStudio.Platform
 {
@@ -137,14 +138,15 @@ namespace Microsoft.VisualStudio.Platform
 			LinkTypes ("text/plain", "text");
 			LinkTypes ("text/x-csharp", "csharp");
 
-			if (this.ContentTypeRegistryService.GetContentType ("css") != null) {
-				LinkTypes ("text/x-css", "css");
-				LinkTypes ("text/x-less-web", "LESS");
-				LinkTypes ("text/x-scss-web", "SCSS");
-				LinkTypes ("text/x-html", "htmlx");
-				LinkTypes ("text/x-json", "JSON");
-			}
-		}
+            if (this.ContentTypeRegistryService.GetContentType ("css") != null) {
+                LinkTypes ("text/x-cshtml-web", "RazorCSharp");
+                LinkTypes ("text/x-css", "css");
+                LinkTypes ("text/x-less-web", "LESS");
+                LinkTypes ("text/x-scss-web", "SCSS");
+                LinkTypes ("text/x-html", "htmlx");
+                LinkTypes ("text/x-json", "JSON");
+            }
+        }
 
 		Tuple<ImmutableDictionary<string, IContentType>, ImmutableDictionary<IContentType, string>> maps = Tuple.Create(ImmutableDictionary<string, IContentType>.Empty, ImmutableDictionary<IContentType, string>.Empty);
     }

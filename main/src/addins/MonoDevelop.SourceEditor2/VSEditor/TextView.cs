@@ -120,6 +120,10 @@ namespace Microsoft.VisualStudio.Text.Editor.Implementation
 
             //			this.Loaded += OnLoaded;
 
+            // TODO: *Someone* needs to call this to execute UndoHistoryRegistry.RegisterHistory -- VS does this via the ShimCompletionControllerFactory.
+            //   Hack this in to here for now until David can take a deeper look.
+            _factoryService.EditorOperationsProvider.GetEditorOperations (this);
+
             _connectionManager = new ConnectionManager(this, _factoryService.TextViewConnectionListeners, _factoryService.GuardedOperations);
 
             SubscribeToEvents();

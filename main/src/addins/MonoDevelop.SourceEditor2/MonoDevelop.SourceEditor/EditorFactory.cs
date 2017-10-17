@@ -42,27 +42,23 @@ namespace MonoDevelop.SourceEditor
 			return new TextDocument ();
 		}
 
-        ITextDocument ITextEditorFactory.CreateNewDocument(string fileName, string mimeType)
-        {
-            return new TextDocument(fileName, mimeType);
-        }
-
-        ITextDocument ITextEditorFactory.CreateNewDocument (MonoDevelop.Core.Text.ITextSource textSource, string fileName, string mimeType)
+		ITextDocument ITextEditorFactory.CreateNewDocument(string fileName, string mimeType)
 		{
-			return new TextDocument (textSource.Text) {
+			return new TextDocument(fileName, mimeType);
+		}
+
+		ITextDocument ITextEditorFactory.CreateNewDocument (MonoDevelop.Core.Text.ITextSource textSource, string fileName, string mimeType)
+		{
+			return new TextDocument (textSource.Text, fileName, mimeType) {
 				Encoding = textSource.Encoding,
-				MimeType = mimeType,
-				FileName = fileName
 			};
 		}
 
 		IReadonlyTextDocument ITextEditorFactory.CreateNewReadonlyDocument (MonoDevelop.Core.Text.ITextSource textSource, string fileName, string mimeType)
 		{
-			return new TextDocument (textSource.Text) {
+			return new TextDocument (textSource.Text, fileName, mimeType) {
 				Encoding = textSource.Encoding,
 				IsReadOnly = true,
-				MimeType = mimeType,
-				FileName = fileName
 			};
 		}
 

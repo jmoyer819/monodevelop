@@ -31,7 +31,7 @@ namespace Microsoft.VisualStudio.Text.Editor.Implementation
     /// Provides a VisualStudio Service that aids in creation of Editor Views
     /// </summary>
     [Export(typeof(ITextEditorFactoryService))]
-    internal sealed class TextEditorFactoryService : ITextEditorFactoryService
+    internal sealed class TextEditorFactoryService : ITextEditorFactoryService, ITextEditorFactoryService2
     {
         [Import]
         internal GuardedOperations GuardedOperations { get; set; }
@@ -129,6 +129,11 @@ namespace Microsoft.VisualStudio.Text.Editor.Implementation
             this.TextViewCreated?.Invoke(this, new TextViewCreatedEventArgs(view));
 
             return view;
+        }
+
+        public ITextView CreateTextView (ITextBuffer textBuffer)
+        {
+            return CreateTextView (textBuffer, roles: null);
         }
 
         public ITextViewRoleSet NoRoles

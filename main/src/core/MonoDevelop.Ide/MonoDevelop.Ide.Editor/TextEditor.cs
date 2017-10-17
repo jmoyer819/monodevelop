@@ -44,6 +44,7 @@ using Xwt;
 using System.Collections.Immutable;
 using MonoDevelop.Components.Commands;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace MonoDevelop.Ide.Editor
 {
@@ -1051,7 +1052,8 @@ namespace MonoDevelop.Ide.Editor
 			MimeTypeChanged += TextEditor_MimeTypeChanged;
 			TextEditor_MimeTypeChanged (null, null);
 
-			this.TextView = Microsoft.VisualStudio.Platform.PlatformCatalog.Instance.TextEditorFactoryService.CreateTextView(this) as Microsoft.VisualStudio.Text.Editor.ITextView;
+			ITextEditorFactoryService2 factoryService2 = Microsoft.VisualStudio.Platform.PlatformCatalog.Instance.TextEditorFactoryService as ITextEditorFactoryService2;
+			this.TextView = factoryService2.CreateTextView(this) as Microsoft.VisualStudio.Text.Editor.ITextView;
 		}
 
 		void TextEditor_FileNameChanged (object sender, EventArgs e)

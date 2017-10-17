@@ -27,6 +27,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -52,6 +53,9 @@ namespace MonoDevelop.Ide.Composition
 		static readonly PartDiscovery Discovery = PartDiscovery.Combine (
 			new AttributedPartDiscoveryV1 (StandardResolver),
 			new AttributedPartDiscovery (StandardResolver, true));
+
+		static List<ComposablePartDefinition> _partsExcludedFromImportTypes = new List<ComposablePartDefinition> ();
+		static List<ComposablePartDefinition> _partsExcludedByTypes = new List<ComposablePartDefinition>();
 
 		public static CompositionManager Instance {
 			get {
@@ -123,12 +127,17 @@ namespace MonoDevelop.Ide.Composition
 			}
 
 			foreach (var task in tasks) {
-				catalog = catalog.AddParts (await task);
+				var discoveredParts = await task;
+				discoveredParts = new DiscoveredParts(discoveredParts.Parts.Where(p => ShouldInclude(p)), discoveredParts.DiscoveryErrors);
+				catalog = catalog.AddParts(discoveredParts);
 			}
 
 			var discoveryErrors = catalog.DiscoveredParts.DiscoveryErrors;
 			if (!discoveryErrors.IsEmpty) {
-				throw new ApplicationException ($"MEF catalog scanning errors encountered.\n{string.Join ("\n", discoveryErrors)}");
+				var errorMessages = discoveryErrors.Select (x => x.Message).OrderBy (x => x);
+				System.IO.File.WriteAllText (Path.Combine(Path.GetTempPath(), "composition_discovery_errors.txt"), String.Join (Environment.NewLine, errorMessages));
+
+				//throw new ApplicationException ($"MEF catalog scanning errors encountered.\n{string.Join ("\n", discoveryErrors)}");
 			}
 
 			CompositionConfiguration configuration = CompositionConfiguration.Create (catalog);
@@ -142,8 +151,23 @@ namespace MonoDevelop.Ide.Composition
 				//var messages = errors.SelectMany (e => e).Select (e => e.Message);
 				//var text = string.Join (Environment.NewLine, messages);
 				//Xwt.Clipboard.SetText (text);
+				var errorMessages = configuration.CompositionErrors.SelectMany(x => x).Select(x => x.Message).OrderBy(x => x);
+				System.IO.File.WriteAllText (Path.Combine (Path.GetTempPath (), "composition_errors.txt"), String.Join (Environment.NewLine, errorMessages));
 				//configuration.ThrowOnErrors ();
 			}
+
+			if (_partsExcludedFromImportTypes.Count > 0) {
+				var excludedParts = _partsExcludedFromImportTypes.Select (x => x.Id).OrderBy (x => x);
+				System.IO.File.WriteAllText (Path.Combine (Path.GetTempPath (), "composition_partsExcludedFromImportTypes.txt"), String.Join (Environment.NewLine, excludedParts));
+			}
+
+			if (_partsExcludedByTypes.Count > 0) {
+				var excludedParts = _partsExcludedByTypes.Select (x => x.Id).OrderBy (x => x);
+				System.IO.File.WriteAllText (Path.Combine (Path.GetTempPath (), "composition_partsExcludedByTypes.txt"), String.Join (Environment.NewLine, excludedParts));
+			}
+
+			var typeRefs = configuration.Catalog.Parts.Select (x => x.Id).OrderBy(x => x);
+			System.IO.File.WriteAllText (Path.Combine (Path.GetTempPath (), "composition_success.txt"), String.Join (Environment.NewLine, typeRefs));
 
 			RuntimeComposition = RuntimeComposition.CreateRuntimeComposition (configuration);
 			ExportProviderFactory = RuntimeComposition.CreateExportProviderFactory ();
@@ -151,6 +175,35 @@ namespace MonoDevelop.Ide.Composition
 			HostServices = MefV1HostServices.Create (ExportProvider.AsExportProvider ());
 			ExportProviderV1 = NetFxAdapters.AsExportProvider (ExportProvider);
 		}
+
+		bool ShouldInclude (ComposablePartDefinition part)
+		{
+			if (part.Imports.Any(x => _excludedImportTypes.Contains(x.ImportingSiteType.FullName)))
+			{
+				_partsExcludedFromImportTypes.Add (part);
+				return false;
+			}
+			else if (_excludedTypes.Contains(part.Type.FullName))
+			{
+				_partsExcludedByTypes.Add(part);
+				return false;
+			}
+
+			return true;
+		}
+
+		static HashSet<string> _excludedImportTypes = new HashSet<string> (StringComparer.Ordinal) {
+			"Microsoft.VisualStudio.Language.Intellisense.ICompletionBroker",
+			"Microsoft.VisualStudio.Language.Intellisense.IGlyphService",
+			"Microsoft.VisualStudio.Language.Intellisense.IPeekResultFactory",
+			"Microsoft.VisualStudio.Language.Intellisense.IQuickInfoBroker",
+			"Microsoft.VisualStudio.Language.Intellisense.ISignatureHelpBroker",
+		};
+
+		static HashSet<string> _excludedTypes = new HashSet<string>(StringComparer.Ordinal) {
+			// Excluded because RenameCommandHandler.ExecuteCommand references IWpfTextView.VisualElement during processing return
+			"Microsoft.CodeAnalysis.Editor.Implementation.InlineRename.RenameCommandHandler",
+		};
 
 		void ReadAssembliesFromAddins (HashSet<Assembly> assemblies, string extensionPath)
 		{

@@ -1,4 +1,4 @@
-//
+﻿//
 //  Copyright (c) Microsoft Corporation. All rights reserved.
 //  Licensed under the MIT License. See License.txt in the project root for license information.
 //
@@ -23,13 +23,14 @@ using Microsoft.VisualStudio.Text.Classification;
 using Microsoft.VisualStudio.Text;
 using Microsoft.VisualStudio.Text.Tagging;
 using Microsoft.VisualStudio.Utilities;
+using Microsoft.VisualStudio.Text.Editor;
 
 namespace Microsoft.VisualStudio.Platform
 {
     [Export(typeof(ITagBasedSyntaxHighlightingFactory))]
     internal sealed class TagBasedSyntaxHighlightingFactory : ITagBasedSyntaxHighlightingFactory {
-        public ISyntaxHighlighting CreateSyntaxHighlighting (ITextBuffer textBuffer) {
-            return new TagBasedSyntaxHighlighting(textBuffer);
+        public ISyntaxHighlighting CreateSyntaxHighlighting (ITextView textView) {
+            return new TagBasedSyntaxHighlighting(textView);
         }
     }
 
@@ -37,16 +38,21 @@ namespace Microsoft.VisualStudio.Platform
     {
         private ITextBuffer textBuffer { get; }
         private IClassifier classifier { get; set; }
+        private MonoDevelop.Ide.Editor.ITextDocument textDocument { get; }
 
-        internal TagBasedSyntaxHighlighting(ITextBuffer textBuffer)
+        internal TagBasedSyntaxHighlighting(ITextView textView)
         {
-            this.textBuffer = textBuffer;
-
+            this.textBuffer = textView.TextBuffer;
+            this.textDocument = textView.GetTextEditor();
         }
 
         public Task<HighlightedLine> GetHighlightedLineAsync(IDocumentLine line, CancellationToken cancellationToken)
         {
-            ITextSnapshotLine snapshotLine = (line as Mono.TextEditor.TextDocument.DocumentLineFromTextSnapshotLine)?.Line;
+            //TODO verify that the snapshot line from this.textBuffer is equivalent to the document line converted to a snapshotline.
+            //Possibly take in a TextDataModel as a parameter and verify the buffers are appropriate.
+            //ITextSnapshotLine snapshotLine = (line as Mono.TextEditor.TextDocument.DocumentLineFromTextSnapshotLine)?.Line;
+
+            ITextSnapshotLine snapshotLine = textBuffer.CurrentSnapshot.GetLineFromLineNumber(line.LineNumber - 1);
             if ((this.classifier == null) || (snapshotLine == null))
             {
                 return Task.FromResult(new HighlightedLine(line, new[] { new ColoredSegment(0, line.Length, ScopeStack.Empty) }));
@@ -132,7 +138,14 @@ namespace Microsoft.VisualStudio.Platform
             var handler = _highlightingStateChanged;
             if (handler != null)
             {
+                int startLineIndex = this.textDocument.OffsetToLineNumber (args.ChangeSpan.Start);
+                int endLineIndex = this.textDocument.OffsetToLineNumber (args.ChangeSpan.End);
 
+                IEnumerable<IDocumentLine> documentLines = this.textDocument.GetLinesBetween (startLineIndex, endLineIndex);
+                foreach(IDocumentLine documentLine in documentLines)
+                {
+                    handler(this, new LineEventArgs(documentLine));
+                }
             }
         }
 
@@ -185,6 +198,9 @@ namespace Microsoft.VisualStudio.Platform
                     styleName = "punctuation.separator.key-value.html";
                     break;
                 case "HTML Server-Side Script":
+                    //styleName = "punctuation.section.embedded.begin"; // suggested by mike, does nothing
+                    //styleName = "punctuation.section.embedded.begin.cs"; // suggested by mike, does nothing
+                    styleName = "meta.preprocessor.source.cs"; // TODO: Find a name to use here
                     //styleName = style.HtmlServerSideScript.Name;
                     break;
                 case "HTML Tag Delimiter":
@@ -248,7 +264,12 @@ namespace Microsoft.VisualStudio.Platform
                     styleName = "variable.other.less";
                     break;
                 default:
-                    styleName = EditorThemeColors.Foreground;
+                    // If the stylename looks like a textmate style, just use it
+                    if (classificationType.Classification.IndexOf('.') >= 0)
+                    {
+                        styleName = classificationType.Classification;
+                    }
+
                     break;
             }
 
