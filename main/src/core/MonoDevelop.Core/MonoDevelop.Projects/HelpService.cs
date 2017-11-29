@@ -125,7 +125,13 @@ namespace MonoDevelop.Projects
 		}
 		
 		public static IEnumerable<string> Sources {
-			get { return sources; }
+			get {
+				lock (helpTreeLock) {
+					if (!helpTreeInitialized)
+						InitializeHelpTree ();
+					return sources;
+				}
+			}
 		}
 		
 		//note: this method is very careful to check that the generated URLs exist in MonoDoc
