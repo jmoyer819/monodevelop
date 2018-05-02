@@ -17,7 +17,7 @@ DEP[0]=md-addins
 DEP_NAME[0]=MDADDINS
 DEP_PATH[0]=${top_srcdir}/../md-addins
 DEP_MODULE[0]=git@github.com:xamarin/md-addins.git
-DEP_NEEDED_VERSION[0]=5dd17a08e1863cb312e78a368b64fd8609f48be1
+DEP_NEEDED_VERSION[0]=a4a783431d8c39167cddef4ec7ad59c5743c13d5
 DEP_BRANCH_AND_REMOTE[0]="android-tools-quick-install origin/android-tools-quick-install"
 
 # heap-shot

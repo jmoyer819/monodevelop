@@ -1921,7 +1921,7 @@ namespace MonoDevelop.SourceEditor
 
 			// for named arguments invoke(arg:<Expr>);
 			if (completeWord.EndsWith (":", StringComparison.Ordinal)) {
-				if (data.GetCharAt (triggerOffset + length) == ':')
+				if (data.Length > triggerOffset + length && data.GetCharAt (triggerOffset + length) == ':')
 					length++;
 			}
 
@@ -3400,6 +3400,11 @@ namespace MonoDevelop.SourceEditor
 			var p = TextEditor.LocationToPoint (caret.Location);
 			Mono.TextEditor.TooltipProvider.ShowAndPositionTooltip (TextEditor, tooltipWindow, p.X, p.Y, (int)tooltipWindow.Width, 0.5);
 			TextEditor.TextArea.SetTooltip (tooltipWindow);
+		}
+
+		void ITextEditorImpl.HideTooltipWindow ()
+		{
+			TextEditor.TextArea.HideTooltip ();
 		}
 
 		Task<ScopeStack> ITextEditorImpl.GetScopeStackAsync (int offset, CancellationToken cancellationToken)

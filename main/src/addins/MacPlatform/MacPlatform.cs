@@ -289,6 +289,10 @@ namespace MonoDevelop.MacIntegration
 				Gtk.Rc.ParseString ("style \"radio-or-check-box\" { engine \"xamarin\" { focusstyle = 2 } } ");
 			}
 
+			// Disallow window tabbing globally
+			if (MacSystemInformation.OsVersion >= MacSystemInformation.Sierra)
+				NSWindow.AllowsAutomaticWindowTabbing = false;
+
 			return loaded;
 		}
 
@@ -449,6 +453,8 @@ namespace MonoDevelop.MacIntegration
 				IdeApp.Workbench.RootWindow.Realized += (sender, args) => {
 					var win = GtkQuartz.GetWindow ((Gtk.Window) sender);
 					win.CollectionBehavior |= NSWindowCollectionBehavior.FullScreenPrimary;
+					if (MacSystemInformation.OsVersion >= MacSystemInformation.Sierra)
+						win.TabbingMode = NSWindowTabbingMode.Disallowed;
 				};
 			}
 
@@ -1043,6 +1049,9 @@ namespace MonoDevelop.MacIntegration
 
 		public override bool IsModalDialogRunning ()
 		{
+			if (NSApplication.SharedApplication.ModalWindow != null)
+				return true;
+
 			var toplevels = GtkQuartz.GetToplevels ();
 
 			// Check GtkWindow's Modal flag or for a visible NSPanel

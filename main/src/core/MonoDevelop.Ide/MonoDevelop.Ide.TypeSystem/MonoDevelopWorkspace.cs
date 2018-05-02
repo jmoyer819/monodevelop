@@ -65,6 +65,7 @@ namespace MonoDevelop.Ide.TypeSystem
 		readonly MonoDevelop.Projects.Solution monoDevelopSolution;
 		object addLock = new object();
 		bool added;
+		object updatingProjectDataLock = new object ();
 
 		public MonoDevelop.Projects.Solution MonoDevelopSolution {
 			get {
@@ -80,6 +81,7 @@ namespace MonoDevelop.Ide.TypeSystem
 
 		static MonoDevelopWorkspace ()
 		{
+			Tasks.CommentTasksProvider.Initialize ();
 			Logger.SetLogger (AggregateLogger.Create (
 				new RoslynLogger (),
 				Logger.GetLogger ()
@@ -109,7 +111,7 @@ namespace MonoDevelop.Ide.TypeSystem
 				.WithChangedOption (Microsoft.CodeAnalysis.Diagnostics.InternalRuntimeDiagnosticOptions.Semantic, true)
 			// Always use persistent storage regardless of solution size, at least until a consensus is reached
 			// https://github.com/mono/monodevelop/issues/4149 https://github.com/dotnet/roslyn/issues/25453
-				.WithChangedOption (Microsoft.CodeAnalysis.Storage.StorageOptions.SolutionSizeThreshold, 0);
+				.WithChangedOption (Microsoft.CodeAnalysis.Storage.StorageOptions.SolutionSizeThreshold, MonoDevelop.Core.Platform.IsLinux ? int.MaxValue : 0);
 
 			if (IdeApp.Preferences.EnableSourceAnalysis) {
 				solutionCrawler.Register (this);
@@ -470,10 +472,6 @@ namespace MonoDevelop.Ide.TypeSystem
 
 			var projectId = GetOrCreateProjectId (p);
 
-			//when reloading e.g. after a save, preserve document IDs
-			var oldProjectData = GetProjectData (projectId);
-			var projectData = CreateProjectData (projectId);
-
 			var references = await CreateMetadataReferences (p, projectId, token).ConfigureAwait (false);
 			if (token.IsCancellationRequested)
 				return null;
@@ -485,29 +483,39 @@ namespace MonoDevelop.Ide.TypeSystem
 			if (fileName.IsNullOrEmpty)
 				fileName = new FilePath (p.Name + ".dll");
 
+			var projectReferences = await CreateProjectReferences (p, token);
 			if (token.IsCancellationRequested)
 				return null;
+
 			var sourceFiles = await p.GetSourceFilesAsync (config != null ? config.Selector : null).ConfigureAwait (false);
-			var documents = CreateDocuments (projectData, p, token, sourceFiles, oldProjectData);
-			if (documents == null)
+			if (token.IsCancellationRequested)
 				return null;
-			var info = ProjectInfo.Create (
-				projectId,
-				VersionStamp.Create (),
-				p.Name,
-				fileName.FileNameWithoutExtension,
-				LanguageNames.CSharp,
-				p.FileName,
-				fileName,
-				cp != null ? cp.CreateCompilationOptions () : null,
-				cp != null ? cp.CreateParseOptions (config) : null,
-				documents.Item1,
-				await CreateProjectReferences (p, token),
-				references,
-				additionalDocuments: documents.Item2
-			);
-			projectData.Info = info;
-			return info;
+
+			lock (updatingProjectDataLock) {
+				//when reloading e.g. after a save, preserve document IDs
+				var oldProjectData = GetProjectData (projectId);
+				var projectData = CreateProjectData (projectId);
+				var documents = CreateDocuments (projectData, p, token, sourceFiles, oldProjectData);
+				if (documents == null)
+					return null;
+				var info = ProjectInfo.Create (
+					projectId,
+					VersionStamp.Create (),
+					p.Name,
+					fileName.FileNameWithoutExtension,
+					LanguageNames.CSharp,
+					p.FileName,
+					fileName,
+					cp != null ? cp.CreateCompilationOptions () : null,
+					cp != null ? cp.CreateParseOptions (config) : null,
+					documents.Item1,
+					projectReferences,
+					references,
+					additionalDocuments: documents.Item2
+				);
+				projectData.Info = info;
+				return info;
+			}
 		}
 
 		internal void UpdateProjectionEntry (MonoDevelop.Projects.ProjectFile projectFile, IReadOnlyList<Projection> projections)
@@ -601,7 +609,7 @@ namespace MonoDevelop.Ide.TypeSystem
 						continue;
 					documents.Add (CreateDocumentInfo (solutionData, p.Name, projectData, f, sck));
 				} else {
-					var id = projectData.GetOrCreateDocumentId (f.Name, projectData);
+					var id = projectData.GetOrCreateDocumentId (f.Name, oldProjectData);
 					if (!duplicates.Add (id))
 						continue;
 					additionalDocuments.Add (CreateDocumentInfo (solutionData, p.Name, projectData, f, sck));
@@ -1488,6 +1496,8 @@ namespace MonoDevelop.Ide.TypeSystem
 				MetadataReferenceCache.RemoveReferences (id);
 
 				UnloadMonoProject (project);
+
+				OnProjectRemoved (id);
 			}
 		}
 
@@ -1496,6 +1506,7 @@ namespace MonoDevelop.Ide.TypeSystem
 		List<MonoDevelop.Projects.DotNetProject> modifiedProjects = new List<MonoDevelop.Projects.DotNetProject> ();
 		object projectModifyLock = new object ();
 		bool freezeProjectModify;
+		Dictionary<MonoDevelop.Projects.DotNetProject, CancellationTokenSource> projectModifiedCts = new Dictionary<MonoDevelop.Projects.DotNetProject, CancellationTokenSource> ();
 		void OnProjectModified (object sender, MonoDevelop.Projects.SolutionItemModifiedEventArgs args)
 		{
 			lock (projectModifyLock) {
@@ -1508,14 +1519,20 @@ namespace MonoDevelop.Ide.TypeSystem
 					if (project == null)
 						return;
 					var projectId = GetProjectId (project);
+					if (projectModifiedCts.TryGetValue (project, out var cts))
+						cts.Cancel ();
+					cts = new CancellationTokenSource ();
+					projectModifiedCts [project] = cts;
 					if (CurrentSolution.ContainsProject (projectId)) {
-						var projectInfo = LoadProject (project, CancellationToken.None, null).ContinueWith (t => {
+						var projectInfo = LoadProject (project, cts.Token, null).ContinueWith (t => {
+							if (t.IsCanceled)
+								return;
 							if (t.IsFaulted) {
 								LoggingService.LogError ("Failed to reload project", t.Exception);
 								return;
 							}
 							OnProjectReloaded (t.Result);
-						});
+						}, cts.Token);
 					} else {
 						modifiedProjects.Add (project);
 					}
