@@ -27,110 +27,15 @@
 //
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Xml;
 
 namespace MonoDevelop.Core
 {
-	/// <summary>
-	/// The Property wrapper wraps a global property service value as an easy to use object.
-	/// </summary>
-	public abstract class ConfigurationProperty<T>
-	{
-		public T Value {
-			get { return OnGetValue (); }
-			set { OnSetValue (value); }
-		}
-
-		/// <summary>
-		/// Set the property to the specified value.
-		/// </summary>
-		/// <param name='newValue'>
-		/// The new value.
-		/// </param>
-		/// <returns>
-		/// true, if the property has changed, false otherwise.
-		/// </returns>
-		public bool Set (T newValue)
-		{
-			return OnSetValue (newValue);
-		}
-
-		public static implicit operator T (ConfigurationProperty<T> watch)
-		{
-			return watch.Value;
-		}
-
-		protected abstract T OnGetValue ();
-
-		protected abstract bool OnSetValue (T value);
-
-		protected void OnChanged ()
-		{
-			var handler = this.Changed;
-			if (handler != null)
-				handler (this, EventArgs.Empty);
-		}
-
-		public event EventHandler Changed;
-	}
-
-	class CoreConfigurationProperty<T>: ConfigurationProperty<T>
-	{
-		T value;
-		string propertyName;
-
-		public CoreConfigurationProperty (string name, T defaultValue, string oldName = null)
-		{
-			this.propertyName = name;
-			if (PropertyService.HasValue (name)) {
-				value = PropertyService.Get<T> (name);
-				return;
-			} else if (!string.IsNullOrEmpty (oldName)) {
-				if (PropertyService.HasValue (oldName)) {
-					value = PropertyService.Get<T> (oldName);
-					PropertyService.Set (name, value);
-					return;
-				}
-			}
-			value = defaultValue;
-		}
-
-		protected override T OnGetValue ()
-		{
-			return value;
-		}
-
-		protected override bool OnSetValue (T value)
-		{
-			if (!object.Equals (this.value, value)) {
-				this.value = value;
-				PropertyService.Set (propertyName, value);
-				OnChanged ();
-				return true;
-			}
-			return false;
-		}
-	}
-
-	public abstract class ConfigurationProperty
-	{
-		public static ConfigurationProperty<T> Create<T> (string propertyName, T defaultValue, string oldName = null)
-		{
-			return new CoreConfigurationProperty<T> (propertyName, defaultValue, oldName);
-		}
-	}
-
 	public static class PropertyService
 	{
-		public static ConfigurationProperty<T> Wrap<T> (string property, T defaultValue)
-		{
-			return new CoreConfigurationProperty<T> (property, defaultValue);
-		}
+		public static ConfigurationProperty<T> Wrap<T> (string property, T defaultValue) => new CoreConfigurationProperty<T> (property, defaultValue);
 
 		//force the static class to intialize
 		internal static void Initialize ()
@@ -201,8 +106,7 @@ namespace MonoDevelop.Core
 			
 			properties.PropertyChanged += delegate(object sender, PropertyChangedEventArgs args) {
 				Runtime.RunInMainThread (() => {
-					if (PropertyChanged != null)
-						PropertyChanged (sender, args);
+					PropertyChanged?.Invoke (sender, args);
 				});
 			};
 			

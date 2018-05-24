@@ -44,6 +44,7 @@ using System.Threading.Tasks;
 using Microsoft.CodeAnalysis.Diagnostics;
 using System.Collections.Generic;
 using Microsoft.CodeAnalysis.Text;
+using Microsoft.CodeAnalysis.FindSymbols;
 
 namespace MonoDevelop.CSharp.Refactoring
 {
@@ -56,18 +57,15 @@ namespace MonoDevelop.CSharp.Refactoring
 				del ();
 		}
 
-		protected override void Update (CommandArrayInfo ainfo)
+		protected override async Task UpdateAsync (CommandArrayInfo ainfo, CancellationToken cancelToken)
 		{
 			var doc = IdeApp.Workbench.ActiveDocument;
-			if (doc == null || doc.FileName == FilePath.Null || doc.ParsedDocument == null)
+			if (doc == null || doc.FileName == FilePath.Null || doc.AnalysisDocument == null)
 				return;
-			var semanticModel = doc.ParsedDocument.GetAst<SemanticModel> ();
+			var semanticModel = await doc.AnalysisDocument.GetSemanticModelAsync (cancelToken);
 			if (semanticModel == null)
 				return;
-			var task = RefactoringSymbolInfo.GetSymbolInfoAsync (doc, doc.Editor);
-			if (!task.Wait (2000))
-				return;
-			var info = task.Result;
+			var info = await RefactoringSymbolInfo.GetSymbolInfoAsync (doc, doc.Editor);
 			bool added = false;
 
 			var ext = doc.GetContent<CodeActionEditorExtension> ();
@@ -120,9 +118,9 @@ namespace MonoDevelop.CSharp.Refactoring
 				ainfo.Add (IdeApp.CommandService.GetCommandInfo (RefactoryCommands.FindReferences), new System.Action (() => {
 
 					if (sym.Kind == SymbolKind.Local || sym.Kind == SymbolKind.Parameter || sym.Kind == SymbolKind.TypeParameter) {
-						FindReferencesHandler.FindRefs (sym, doc.AnalysisDocument.Project.Solution);
+						FindReferencesHandler.FindRefs (new [] { SymbolAndProjectId.Create (sym, doc.AnalysisDocument.Project.Id) }, doc.AnalysisDocument.Project.Solution).Ignore ();
 					} else {
-						RefactoringService.FindReferencesAsync (FindReferencesHandler.FilterSymbolForFindReferences (sym).GetDocumentationCommentId ());
+						RefactoringService.FindReferencesAsync (FindReferencesHandler.FilterSymbolForFindReferences (sym).GetDocumentationCommentId ()).Ignore ();
 					}
 
 				}));

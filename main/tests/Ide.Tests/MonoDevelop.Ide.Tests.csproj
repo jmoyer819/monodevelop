@@ -23,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,6 +33,7 @@
     <WarningLevel>4</WarningLevel>
     <ConsolePause>false</ConsolePause>
     <DebugSymbols>true</DebugSymbols>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -54,6 +56,24 @@
       <HintPath>..\..\build\bin\Microsoft.CodeAnalysis.Workspaces.Desktop.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="Microsoft.VisualStudio.Composition">
+      <HintPath>..\..\build\bin\Microsoft.VisualStudio.Composition.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.Features">
+      <HintPath>..\..\build\bin\Microsoft.CodeAnalysis.Features.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.CSharp">
+      <HintPath>..\..\build\bin\Microsoft.CodeAnalysis.CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Collections.Immutable">
+      <HintPath>..\..\build\bin\System.Collections.Immutable.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.EditorFeatures">
+      <HintPath>..\..\build\bin\Microsoft.CodeAnalysis.EditorFeatures.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ProjectTemplateTests.cs" />
@@ -104,13 +124,8 @@
     <Compile Include="MonoDevelop.SourceEditor\DebugTooltipTests.cs" />
     <Compile Include="MonoDevelop.SourceEditor\JSonIndentEngineTests.cs" />
     <Compile Include="MonoDevelop.SourceEditor\SourceEditorTests.cs" />
-    <Compile Include="IdeTestBase.cs" />
     <Compile Include="MonoDevelop.Ide\UserPreferencesTests.cs" />
     <Compile Include="MonoDevelop.Ide.Projects\ResourcesTests.cs" />
-    <Compile Include="MonoDevelop.Ide.Gui\TestViewContent.cs" />
-    <Compile Include="MonoDevelop.Ide.Gui\TestWorkbenchWindow.cs" />
-    <Compile Include="MonoDevelop.Ide.Gui\TestDocument.cs" />
-    <Compile Include="TypeSystemServiceTestExtensions.cs" />
     <Compile Include="MonoDevelop.Ide.Editor\SkipCharSessionTests.cs" />
     <Compile Include="MonoDevelop.Components\PangoUtilTests.cs" />
     <Compile Include="MonoDevelop.Ide.Projects\DotNetCoreProjectTests.cs" />
@@ -118,6 +133,20 @@
     <Compile Include="MonoDevelop.Ide\MonoDocDocumentationProviderTests.cs" />
     <Compile Include="MonoDevelop.Ide.Editor\EditorConfigTests.cs" />
     <Compile Include="MonoDevelop.Ide.Projects\PclToProjectJsonConversionTests.cs" />
+    <Compile Include="MonoDevelop.Ide.Tasks\CommentTasksProviderTests.cs" />
+    <Compile Include="MonoDevelop.Ide.Tasks\CommentTasksProviderTests.Controller.cs" />
+    <Compile Include="MonoDevelop.Ide.Composition\CompositionManager.CachingTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices\MonoDevelopProjectCacheHostServiceTests.cs" />
+    <Compile Include="MonoDevelop.Ide\RoslynSearchCategoryTests.cs" />
+    <Compile Include="MonoDevelop.Ide.Editor\CodeSnippetTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices\RoslynServiceTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\OptionsExtensionsTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\RoslynPreferencesTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\OptionsTestBase.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\MonoDevelopOptionPersisterIntegrationTests.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\MockOptionService.cs" />
+    <Compile Include="MonoDevelop.Ide.RoslynServices.Options\MonoDevelopOptionPersisterTests.cs" />
+    <Compile Include="TypeForwarders.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
@@ -174,6 +203,10 @@
       <Name>MonoDevelop.SourceEditor</Name>
       <Private>False</Private>
     </ProjectReference>
+    <ProjectReference Include="..\IdeUnitTests\IdeUnitTests.csproj">
+      <Project>{F7B2B155-7CF4-42C4-B5AF-63C0667D2E4F}</Project>
+      <Name>IdeUnitTests</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="MonoDevelop.Ide\" />
@@ -184,6 +217,10 @@
     <Folder Include="MonoDevelop.Components.PropertyGrid\" />
     <Folder Include="MonoDevelop.SourceEditor\" />
     <Folder Include="MonoDevelop.Components\" />
+    <Folder Include="MonoDevelop.Ide.Tasks\" />
+    <Folder Include="MonoDevelop.Ide.Composition\" />
+    <Folder Include="MonoDevelop.Ide.RoslynServices\" />
+    <Folder Include="MonoDevelop.Ide.RoslynServices.Options\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

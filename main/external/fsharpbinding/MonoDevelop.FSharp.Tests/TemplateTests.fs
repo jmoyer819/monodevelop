@@ -105,7 +105,7 @@ type ``Template tests``() =
             cinfo.Parameters.["AppIdentifier"] <- tt
             cinfo.Parameters.["AndroidMinSdkVersionAttribute"] <- "android:minSdkVersion=\"10\""
             cinfo.Parameters.["AndroidThemeAttribute"] <- ""
-            cinfo.Parameters.["TargetFrameworkVersion"] <- "MonoAndroid,Version=v7.0"
+            cinfo.Parameters.["TargetFrameworkVersion"] <- "MonoAndroid,Version=v8.1"
 
             for templateParameter in TemplateParameter.CreateParameters (parameters) do
                 cinfo.Parameters.[templateParameter.Name] <- templateParameter.Value
@@ -149,12 +149,18 @@ type ``Template tests``() =
 
     [<TestFixtureSetUp>]
     member x.Setup() =
-        let config = """
-<configuration>  
-  <config>
-    <add key="repositoryPath" value="packages" />
-  </config>
-</configuration>"""
+        let config =
+            """
+            <configuration>
+              <config>
+                <add key="repositoryPath" value="packages" />
+              </config>
+              <packageSources>
+                  <clear /> <!-- ensure only the sources defined below are used -->
+                  <add key="NuGet official package source" value="https://api.nuget.org/v3/index.json" />
+              </packageSources>
+            </configuration>
+            """
         if not (Directory.Exists templatesDir) then
             Directory.CreateDirectory templatesDir |> ignore
         let configFileName = templatesDir/"NuGet.Config"

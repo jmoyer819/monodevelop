@@ -1,5 +1,4 @@
 ﻿namespace MonoDevelopTests
-open System
 open System.IO
 open System.Reflection
 open System.Runtime.CompilerServices
@@ -22,112 +21,94 @@ module Interactive =
         async {
             let (/) a b = Path.Combine(a,b)
             let testDllFolder = Assembly.GetExecutingAssembly().Location |> Path.GetDirectoryName
-            let pathToExe = "\"" + testDllFolder/".."/".."/".."/".."/".."/"build"/"AddIns"/"FSharpBinding"/"MonoDevelop.FSharpInteractive.Service.exe\""
-            let ses = InteractiveSession(pathToExe)
+
+            let pathToExe = "\"" + testDllFolder/"MonoDevelop.FSharpInteractive.Service.exe\""
+            let ses = new InteractiveSession(pathToExe)
             ses.StartReceiving()
-            let finished = new AutoResetEvent(false) // using AutoResetEvent because I can't get Async.AwaitEvent to work here without a hang
-            ses.PromptReady.Add(fun _ -> finished.Set() |> ignore)
-            let succeeded = finished.WaitOne(10000)
-            if not succeeded then Assert.Fail "Timed out waiting for prompt"
+            do! ses.PromptReady |> Async.AwaitEvent
             return ses
         }
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive receives completions``() =
         async {
-            let mutable results = [||]
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.CompletionsReceived.Add(fun completions -> results <- completions |> Array.map(fun c -> c.displayText)
-                                                               finished.Set() |> ignore)
             session.SendCompletionRequest "Lis" 3
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should contain "List"
-            else Assert.Fail "Timeout" } |> toTask
+            let! completions = session.CompletionsReceived |> Async.AwaitEvent
+            let results = completions |> Array.map(fun c -> c.displayText)
+            session.KillNow()
+            results |> should contain "List"
+        } |> toTask
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive receives parameter hints``() =
         async {
-            let mutable results = [||]
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.ParameterHintReceived.Add(fun parameters -> results <- 
-                                                                    parameters 
-                                                                    |> Array.map(fun p -> match p with
-                                                                                          | MonoDevelop.FSharp.Shared.ParameterTooltip.ToolTip (_signature, _doc, parameters) -> parameters
-                                                                                          | MonoDevelop.FSharp.Shared.ParameterTooltip.EmptyTip -> [||])
-                                                                finished.Set() |> ignore)
             session.SendParameterHintRequest "System.DateTime.Now.AddDays(" 28
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should equal [| [|"value"|] |]
-            else Assert.Fail "Timeout" } |> toTask
+            let! parameters = session.ParameterHintReceived |> Async.AwaitEvent
+            let results = parameters
+                          |> Array.map
+                               (function
+                                | MonoDevelop.FSharp.Shared.ParameterTooltip.ToolTip (_signature, _doc, parameters) -> parameters
+                                | MonoDevelop.FSharp.Shared.ParameterTooltip.EmptyTip -> [||])
+
+            session.KillNow()
+            results |> should equal [| [|"value"|] |]
+        } |> toTask
+
+    let sendInput (session:InteractiveSession) input =
+        session.SendInput input None
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive evaluates 1+1``() =
         async {
-            let mutable results = String.empty
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> results <- output 
-                                                   finished.Set() |> ignore)
-            session.SendInput "1+1;;"
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should equal "val it : int = 2\n"
-            else Assert.Fail "Timeout" } |> toTask
+            sendInput session "1+1;;"
+            let! results = session.TextReceived |> Async.AwaitEvent
+            session.KillNow()
+            results |> should equal "val it : int = 2\n"
+        } |> toTask
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive evaluates multiline expression``() =
         async {
-            let mutable results = String.empty
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> results <- output 
-                                                   finished.Set() |> ignore)
-            session.SendInput "let myfun x="
-            session.SendInput "    if (x > 0) then 'a'"
-            session.SendInput "    else 'b'"
-            session.SendInput ";;"    
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should equal "val myfun : x:int -> char\n"
-            else Assert.Fail "Timeout" } |> toTask
+            sendInput session "let myfun x="
+            sendInput session "    if (x > 0) then 'a'"
+            sendInput session "    else 'b'"
+            sendInput session ";;"
+
+            let! results = session.TextReceived |> Async.AwaitEvent
+            session.KillNow()
+            results |> should equal "val myfun : x:int -> char\n"
+        } |> toTask
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive evaluates complex type``() =
         async {
-            let mutable results = String.empty
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> results <- output 
-                                                   finished.Set() |> ignore)
-            session.SendInput "type CmdResult = ErrorLevel of string * int;;"
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should equal "type CmdResult = | ErrorLevel of string * int\n"
-            else Assert.Fail "Timeout" } |> toTask
+            sendInput session "type CmdResult = ErrorLevel of string * int;;"
+            let! results = session.TextReceived |> Async.AwaitEvent
+            session.KillNow()
+            results |> should equal "type CmdResult = | ErrorLevel of string * int\n"
+        } |> toTask
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Bug 56611``() =
         async {
-            let mutable results = String.empty
             let! session = createSession()
-            let finished = new AutoResetEvent(false)
-            session.TextReceived
-            |> Observable.throttle (TimeSpan.FromMilliseconds 500.0)
-            |> Observable.subscribe
-                (fun output -> results <- output
-                               finished.Set() |> ignore)
-            |> ignore
-            session.SendInput "type O = { X:string };;"
-            session.SendInput "[| {X=\"\"} |];;"
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then 
-                results 
-                |> should equal "val it : O [] = [|{X = \"\";}|]\n"
-            else Assert.Fail "Timeout" } |> toTask
+            sendInput session "type O = { X:string };;"
+            sendInput session "[| {X=\"\"} |];;"
+            do! session.TextReceived |> Async.AwaitEvent |> Async.Ignore
+            do! session.TextReceived |> Async.AwaitEvent |> Async.Ignore
+            let! results = session.TextReceived |> Async.AwaitEvent
+            session.KillNow()
+            results |> should equal "val it : O [] = [|{X = \"\";}|]\n"
+        } |> toTask
 
-    [<Test;Ignore;AsyncStateMachine(typeof<Task>)>]
+    [<Test;AsyncStateMachine(typeof<Task>)>]
     let ``Interactive send references uses real assemblies #43307``() =
         async {
-            let mutable results = String.empty
             let! session = createSession()
             let directoryName = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
             let sln = directoryName / "Samples" / "bug43307" / "bug43307.sln"
@@ -135,11 +116,8 @@ module Interactive =
             use! sol = Services.ProjectService.ReadWorkspaceItem (monitor, sln |> FilePath) |> Async.AwaitTask
             use project = sol.GetAllItems<FSharpProject> () |> Seq.head
             project.GetOrderedReferences()
-            |> List.iter (fun a -> session.SendInput (sprintf  @"#r ""%s"";;" a.Path))
+            |> List.iter (fun a -> sendInput session (sprintf  @"#r ""%s"";;" a.Path))
             let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> if output.Contains "jsonObj" then
-                                                       results <- output
-                                                       finished.Set() |> ignore)
             let input =
                 """
                 type Movie = {
@@ -151,11 +129,21 @@ module Interactive =
                 ]
                 let jsonObj = Newtonsoft.Json.JsonConvert.SerializeObject(movies);;
                 """
+            sendInput session input
 
-            session.SendInput input
-            let succeeded = finished.WaitOne(20000)
-            if succeeded then results |> should equal "val jsonObj : string = \"[{\"Name\":\"Bad Boys\",\"Year\":1995}]\"\n"
-            else Assert.Fail "Timeout" } |> toTask
+            let rec getOutput() =
+                async {
+                    let! output = session.TextReceived |> Async.AwaitEvent
+                    if output.Contains "jsonObj" then
+                        return output
+                    else
+                        return! getOutput()
+
+                }
+            let! results = getOutput()
+            session.KillNow()
+            results |> should equal "val jsonObj : string = \"[{\"Name\":\"Bad Boys\",\"Year\":1995}]\"\n"
+        } |> toTask
 
     let getPadAndEditor() =
         FixtureSetup.initialiseMonoDevelop()
@@ -186,18 +174,82 @@ module Interactive =
         doc.GetMarkers line2 |> Seq.length |> should equal 1
 
     [<Test;AsyncStateMachine(typeof<Task>)>]
-    let ``Interactive gets source directory``() =
+    let ``Interactive gets source file and directory``() =
         async {
-            let mutable results = String.empty
+            let sourceFile = Some "/SomeFolder/SomeFile.fsx"
             let! session = createSession()
-            session.SetSourceDirectory "/"
-            let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> finished.Set() |> ignore)
-            let succeeded = finished.WaitOne(5000)
-            session.SendInput "printfn __SOURCE_DIRECTORY__;;"
-            let finished = new AutoResetEvent(false)
-            session.TextReceived.Add(fun output -> results <- output 
-                                                   finished.Set() |> ignore)
-            let succeeded = finished.WaitOne(5000)
-            if succeeded then results |> should equal "/\n"
-            else Assert.Fail "Timeout" } |> toTask
+            session.SendInput "printfn __SOURCE_FILE__;;" sourceFile
+            let! output = session.TextReceived |> Async.AwaitEvent
+            output |> should equal ("SomeFile.fsx\n")
+            // ignore `val it: unit = ()`
+            let! ignore = session.TextReceived |> Async.AwaitEvent
+            session.SendInput "printfn __SOURCE_DIRECTORY__;;" sourceFile
+            let! output = session.TextReceived |> Async.AwaitEvent
+            session.KillNow()
+            output |> should equal "/SomeFolder\n"
+        } |> toTask
+
+module ``Shell history`` =
+    [<Test>]
+    let ``Can go back``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Up() |> should equal (Some "1")
+
+    [<Test>]
+    let ``Can go back twice``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Push "2"
+        hist.Up() |> should equal (Some "2")
+        hist.Up() |> should equal (Some "1")
+            
+    [<Test>]
+    let ``Can't go back three times``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Push "2"
+        hist.Up() |> should equal (Some "2")
+        hist.Up() |> should equal (Some "1")
+        hist.Up() |> should equal None
+
+    [<Test>]
+    let ``Down on empty list returns none``() =
+        let hist = ShellHistory()
+        hist.Down() |> should equal None
+
+    [<Test>]
+    let ``Up then down returns empty``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Push "2"
+        hist.Up() |> should equal (Some "2")
+        hist.Down() |> should equal None
+
+    [<Test>]
+    let ``Up up down returns 2``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Push "2"
+        hist.Up() |> should equal (Some "2")
+        hist.Up() |> should equal (Some "1")
+        hist.Down() |> should equal (Some "2")
+        hist.Down() |> should equal None
+
+    [<Test>]
+    let ``Up down up``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Up() |> should equal (Some "1")
+        hist.Down() |> should equal None
+        hist.Up() |> should equal (Some "1")
+      
+    [<Test>]
+    let ``Up down down down up``() =
+        let hist = ShellHistory()
+        hist.Push "1"
+        hist.Up() |> should equal (Some "1")
+        hist.Down() |> should equal None
+        hist.Down() |> should equal None
+        hist.Down() |> should equal None
+        hist.Up() |> should equal (Some "1")

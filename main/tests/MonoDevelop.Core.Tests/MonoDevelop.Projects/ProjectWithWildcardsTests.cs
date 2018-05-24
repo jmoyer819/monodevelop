@@ -576,7 +576,6 @@ namespace MonoDevelop.Projects
 		}
 
 		[Test]
-		//[Ignore ("xbuild bug: RecursiveDir metadata returns the wrong value")]
 		public async Task LoadProjectWithWildcardLinks ()
 		{
 			string solFile = Util.GetSampleProject ("project-with-wildcard-links", "PortableTest.sln");
@@ -622,6 +621,23 @@ namespace MonoDevelop.Projects
 			Assert.AreEqual (Path.Combine ("Data", "t2.txt"), f2.Link.ToString ());
 
 			sol.Dispose ();
+		}
+
+		[Test]
+		public async Task SaveProjectWithWildcardLink ()
+		{
+			string projFile = Util.GetSampleProject ("console-project-with-wildcards", "ConsoleProject-with-link-wildcard.csproj");
+
+			var p = await Services.ProjectService.ReadSolutionItem (Util.GetMonitor (), projFile);
+			Assert.IsInstanceOf<DotNetProject> (p);
+			var mp = (DotNetProject)p;
+			mp.DefaultNamespace = "ConsoleProjectWithWildcardLink";
+
+			await p.SaveAsync (Util.GetMonitor ());
+
+			Assert.AreEqual (Util.ToSystemEndings (File.ReadAllText (p.FileName + ".saved1")), File.ReadAllText (p.FileName));
+
+			p.Dispose ();
 		}
 
 		[Test]

@@ -8,43 +8,58 @@ using Microsoft.VisualStudio.Text.Classification;
 using MonoDevelop.Core;
 using MonoDevelop.Ide.Editor;
 using MonoDevelop.Ide.Editor.Highlighting;
+using MonoDevelop.Ide.Fonts;
 using MonoDevelop.Ide.TypeSystem;
 
 namespace Microsoft.VisualStudio.Language.Intellisense.Implementation
 {
 	static class MDUtils
 	{
-		public static string ClassificationsToMarkup (ITextSnapshot snapshot, IList<ClassificationSpan> classifications, Span? locus)
+		const int MaxParamColumnCount = 100;
+
+		public static string ClassificationsToMarkup (ITextSnapshot snapshot, IList<ClassificationSpan> classifications, IParameter currentParameter)
 		{
 			var markup = new StringBuilder ();
 			var theme = DefaultSourceEditorOptions.Instance.GetEditorTheme ();
-			foreach (var part in classifications) {
-				//if () { TODO: Check if we hanle new lines
-				//	markup.AppendLine ();
-				//	continue;
-				//}
-				markup.Append ("<span foreground=\"");
-				markup.Append (GetThemeColor (theme, GetThemeColor (part.ClassificationType.Classification)));
-				markup.Append ("\">");
+			Span? locus = currentParameter?.Locus;
+			bool inDocumentation = false;
+			for (int i = 0; i < classifications.Count; i++) {
+				var part = classifications [i];
+				if (!inDocumentation) {
+					if (part.ClassificationType.Classification == ClassificationTypeNames.Text) {
+						inDocumentation = true;
+						markup.Append ("<span font='" + FontService.SansFontName + "' size='small'>");
+						markup.AppendLine ();
+					}
+					else {
+						markup.Append ("<span foreground=\"");
+						markup.Append (GetThemeColor (theme, GetThemeColor (part.ClassificationType.Classification)));
+						markup.Append ("\">");
+					}
+				}
+
 				if (locus is Span locusSpan && part.Span.Intersection (locusSpan) is SnapshotSpan intersection) {
 					if (intersection.Start == part.Span.Start) {
 						if (intersection.End == part.Span.End) {
 							markup.Append ("<b>");
 							markup.Append (Ambience.EscapeText (snapshot.GetText (part.Span)));
 							markup.Append ("</b>");
-						} else {
+						}
+						else {
 							markup.Append ("<b>");
 							markup.Append (Ambience.EscapeText (snapshot.GetText (intersection)));
 							markup.Append ("</b>");
 							markup.Append (Ambience.EscapeText (snapshot.GetText (intersection.End, part.Span.End - intersection.End)));
 						}
-					} else {
+					}
+					else {
 						if (intersection.End == part.Span.End) {
 							markup.Append (Ambience.EscapeText (snapshot.GetText (part.Span.Start, intersection.Start - part.Span.Start)));
 							markup.Append ("<b>");
 							markup.Append (Ambience.EscapeText (snapshot.GetText (intersection)));
 							markup.Append ("</b>");
-						} else {
+						}
+						else {
 							markup.Append (Ambience.EscapeText (snapshot.GetText (part.Span.Start, intersection.Start - part.Span.Start)));
 							markup.Append ("<b>");
 							markup.Append (Ambience.EscapeText (snapshot.GetText (intersection)));
@@ -52,18 +67,56 @@ namespace Microsoft.VisualStudio.Language.Intellisense.Implementation
 							markup.Append (Ambience.EscapeText (snapshot.GetText (intersection.End, part.Span.End - intersection.End)));
 						}
 					}
-				} else {
-					markup.Append (Ambience.EscapeText (snapshot.GetText (part.Span)));
 				}
-				markup.Append ("</span>");
+				else {
+					if (inDocumentation) {
+						AppendAndBreakText (markup, snapshot.GetText (part.Span), 0, MaxParamColumnCount);
+					} else {
+						markup.Append(Ambience.EscapeText (snapshot.GetText (part.Span)));
+					}
+				}
+				if (!inDocumentation)
+					markup.Append ("</span>");
 			}
+			if (inDocumentation)
+				markup.Append ("</span>");
+
+			if (currentParameter != null) {
+				if (!string.IsNullOrEmpty(currentParameter.Documentation)) {
+					markup.Append ("<span font='" + FontService.SansFontName + "'");
+					//markup.Append ("foreground ='" + GetThemeColor (theme, "source.cs") + "'");
+					markup.Append (" size='small'>");
+					markup.AppendLine ();
+					markup.AppendLine ();
+					markup.Append ("<b>");
+					markup.Append (currentParameter.Name);
+					markup.Append (": </b>");
+					markup.Append (currentParameter.Documentation);
+					markup.Append ("</span>");
+				}
+			}
+
 			return markup.ToString ();
+		}
+
+		static void AppendAndBreakText (StringBuilder markup, string text, int col, int maxColumn)
+		{
+			var idx = maxColumn - col > 0 && maxColumn - col < text.Length ? text.IndexOf (' ', maxColumn - col) : -1;
+			if (idx < 0) {
+				markup.Append (Ambience.EscapeText (text));
+			} else {
+				markup.Append (Ambience.EscapeText (text.Substring (0, idx)));
+				if (idx + 1 >= text.Length)
+					return;
+				markup.AppendLine ();
+				AppendAndBreakText (markup, text.Substring (idx + 1), 0, maxColumn);
+			}
 		}
 
 		private static void AppendSpan (ITextSnapshot snapshot, StringBuilder markup, EditorTheme theme, ClassificationSpan part)
 		{
 			markup.Append ("<span foreground=\"");
-			markup.Append (GetThemeColor (theme, GetThemeColor (part.ClassificationType.Classification)));
+			markup.Append (GetThemeColor (theme, "source.cs"));
 			markup.Append ("\">");
 			markup.Append (Ambience.EscapeText (snapshot.GetText (part.Span)));
 			markup.Append ("</span>");
@@ -138,6 +191,16 @@ namespace Microsoft.VisualStudio.Language.Intellisense.Implementation
 			public const string StructName = "struct name";
 			public const string TypeParameterName = "type parameter name";
 
+			public const string FieldName = "field name";
+			public const string EnumMemberName = "enum member name";
+			public const string ConstantName = "constant name";
+			public const string LocalName = "local name";
+			public const string ParameterName = "parameter name";
+			public const string MethodName = "method name";
+			public const string ExtensionMethodName = "extension method name";
+			public const string PropertyName = "property name";
+			public const string EventName = "event name";
+ 
 			public const string XmlDocCommentAttributeName = "xml doc comment - attribute name";
 			public const string XmlDocCommentAttributeQuotes = "xml doc comment - attribute quotes";
 			public const string XmlDocCommentAttributeValue = "xml doc comment - attribute value";
@@ -161,5 +224,45 @@ namespace Microsoft.VisualStudio.Language.Intellisense.Implementation
 			public const string XmlLiteralProcessingInstruction = "xml literal - processing instruction";
 			public const string XmlLiteralText = "xml literal - text";
 		}
+
+		/// <summary>
+		/// Gets a snapshot point out of a monodevelop line/column pair or null.
+		/// </summary>
+		/// <returns>The snapshot point or null if the coordinate is invalid.</returns>
+		/// <param name="snapshot">The snapshot.</param>
+		/// <param name="line">Line number (1 based).</param>
+		/// <param name="column">Column number (1 based).</param>
+		public static SnapshotPoint? GetSnapshotPoint (this ITextSnapshot snapshot, int line, int column)
+		{
+			if (TryGetSnapshotPoint (snapshot, line, column, out var snapshotPoint)) 
+				return snapshotPoint;
+			return null;
+		}
+
+		/// <summary>
+		/// Tries to get a snapshot point out of a monodevelop line/column pair.
+		/// </summary>
+		/// <returns><c>true</c>, if get snapshot point was set, <c>false</c> otherwise.</returns>
+		/// <param name="snapshot">The snapshot.</param>
+		/// <param name="line">Line number (1 based).</param>
+		/// <param name="column">Column number (1 based).</param>
+		/// <param name="snapshotPoint">The snapshot point if return == true.</param>
+		public static bool TryGetSnapshotPoint (this ITextSnapshot snapshot, int line, int column, out SnapshotPoint snapshotPoint)
+		{
+			if (line < 1 || line > snapshot.LineCount) {
+				snapshotPoint = default (SnapshotPoint);
+				return false;
+			}
+
+			var lineSegment = snapshot.GetLineFromLineNumber (line - 1);
+			if (column < 1 || column > lineSegment.Length) {
+				snapshotPoint = default (SnapshotPoint);
+				return false;
+			}
+
+			snapshotPoint = new SnapshotPoint (snapshot, lineSegment.Start.Position + column - 1);
+			return true;
+		}
 	}
+
 }

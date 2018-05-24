@@ -35,9 +35,9 @@ using System.Collections.Generic;
 using MonoDevelop.Projects.Extensions;
 using System.Text;
 using System.Xml;
-using ICSharpCode.NRefactory.TypeSystem;
+using ICSharpCode.Decompiler.TypeSystem;
 using MonoDevelop.Projects;
-using ICSharpCode.NRefactory.Documentation;
+using ICSharpCode.Decompiler.Documentation;
 
 namespace MonoDevelop.AssemblyBrowser
 {
@@ -79,24 +79,6 @@ namespace MonoDevelop.AssemblyBrowser
 					if (p.IsRef || p.IsOut)
 						result.Append ("&");
 					AppendTypeReference (result, p.Type.ToTypeReference ());
-				}
-			}
-			result.Append (')');
-		}
-
-		static void AppendHelpParameterList (StringBuilder result, IList<IUnresolvedParameter> parameters)
-		{
-			result.Append ('(');
-			if (parameters != null) {
-				for (int i = 0; i < parameters.Count; i++) {
-					if (i > 0)
-						result.Append (',');
-					var p = parameters [i];
-					if (p == null)
-						continue;
-					if (p.IsRef || p.IsOut)
-						result.Append ("&");
-					AppendTypeReference (result, p.Type);
 				}
 			}
 			result.Append (')');

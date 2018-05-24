@@ -40,24 +40,12 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Xml" />
-    <Reference Include="glade-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="pango-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="atk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
+    <Reference Include="glade-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="pango-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="atk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
     <Reference Include="Mono.Posix" />
     <Reference Include="Mono.Cairo" />
     <Reference Include="System.Xml.Linq" />
@@ -72,10 +60,12 @@
     <Reference Include="System.Runtime" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="Newtonsoft.Json">
-      <HintPath>..\..\..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\..\..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System.Runtime.InteropServices.RuntimeInformation">
       <HintPath>..\..\..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>False</Private>
     </Reference>
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\..\..\packages\System.Collections.Immutable.1.3.1\lib\portable-net45+win8+wp8+wpa81\System.Collections.Immutable.dll</HintPath>
@@ -223,9 +213,6 @@
     <EmbeddedResource Include="MonoDevelop.UnitTesting.addin.xml">
       <LogicalName>MonoDevelop.UnitTesting.addin.xml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="gtk-gui\gui.stetic">
-      <LogicalName>gui.stetic</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="Gui\icons\pad-unit-test-16.png">
       <LogicalName>pad-unit-test-16.png</LogicalName>
     </EmbeddedResource>
@@ -283,7 +270,6 @@
     <Compile Include="Services\IResultsStore.cs" />
     <Compile Include="Services\UnitTestResultsStore.cs" />
     <Compile Include="Services\WorkspaceTestGroup.cs" />
-    <Compile Include="gtk-gui\generated.cs" />
     <Compile Include="Services\UnitTestResult.cs" />
     <Compile Include="Services\UnitTestStatus.cs" />
     <Compile Include="Services\UnitTestProjectServiceExtension.cs" />
@@ -335,8 +321,8 @@
     </VsTestConsoleExtensions>
   </ItemGroup>
   <Target Name="CopyTestAdapters" BeforeTargets="Build">
-    <Copy SourceFiles="@(VsTestConsole)" DestinationFolder="$(OutputPath)\VsTestConsole\%(RecursiveDir)" />
-    <Copy SourceFiles="@(VsTestConsoleExtensions)" DestinationFolder="$(OutputPath)\VsTestConsole\Extensions\" />
+    <Copy SourceFiles="@(VsTestConsole)" DestinationFolder="$(OutputPath)\VsTestConsole\%(RecursiveDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(VsTestConsoleExtensions)" DestinationFolder="$(OutputPath)\VsTestConsole\Extensions\" SkipUnchangedFiles="true" />
   </Target>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>

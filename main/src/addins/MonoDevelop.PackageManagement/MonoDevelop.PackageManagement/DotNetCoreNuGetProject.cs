@@ -96,9 +96,14 @@ namespace MonoDevelop.PackageManagement
 			get { return msbuildProjectPath; }
 		}
 
+		public static bool CanCreate (DotNetProject project)
+		{
+			return project.MSBuildProject.Sdk != null;
+		}
+
 		public static NuGetProject Create (DotNetProject project)
 		{
-			if (project.MSBuildProject.Sdk != null)
+			if (CanCreate (project))
 				return new DotNetCoreNuGetProject (project);
 
 			return null;
@@ -301,6 +306,9 @@ namespace MonoDevelop.PackageManagement
 			using (var task = new PackageRestoreTask (restoreTask)) {
 				await restoreTask;
 			}
+
+			// Ensure MSBuild tasks are up to date when the next build is run.
+			project.ShutdownProjectBuilder ();
 
 			if (!packageRestorer.LockFileChanged) {
 				// Need to refresh the references since the restore did not.

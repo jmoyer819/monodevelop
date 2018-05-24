@@ -218,29 +218,19 @@ namespace Mono.TextEditor.Tests.Actions
 		}
 
 		[Test]
-		public void AdvancedBackspaceTests ()
+		public void TestBackspaceUTF32 ()
 		{
-			var data = Create (@"($)", mimeType: "text/x-csharp");
-			DefaultSourceEditorOptions.Instance.AutoInsertMatchingBracket = true;
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @"$");
-			data = Create (@"[$]", mimeType:"text/x-csharp");
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @"$");
-			data = Create ("\"$\"", mimeType:"text/x-csharp");
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @"$");
-			data = Create ("'$'", mimeType: "text/x-csharp");
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @"$");
+			var data = Create (@"12🚀$34");
+			DeleteActions.Backspace (data);
+			Check (data, @"12$34");
+		}
 
-			data = Create (@"// ($)", mimeType: "text/x-csharp");
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @"// $)");
-
-			data = Create (@""" ($)", mimeType: "text/x-csharp");
-			MonoDevelop.SourceEditor.EditActions.AdvancedBackspace (data);
-			Check (data, @""" $)");
+		[Test]
+		public void TestDeleteUTF32 ()
+		{
+			var data = Create (@"12$🚀34");
+			DeleteActions.Delete (data);
+			Check (data, @"12$34");
 		}
 	}
 }

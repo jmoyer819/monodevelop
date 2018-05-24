@@ -25,7 +25,8 @@
 // THE SOFTWARE.
 using System;
 using Mono.Cecil;
-using ICSharpCode.NRefactory.TypeSystem;
+using ICSharpCode.Decompiler.CSharp;
+using ICSharpCode.Decompiler.TypeSystem;
 using System.Threading.Tasks;
 using MonoDevelop.Core;
 using System.IO;
@@ -38,15 +39,16 @@ namespace MonoDevelop.AssemblyBrowser
 	{
 		readonly CancellationTokenSource src = new CancellationTokenSource ();
 		readonly AssemblyBrowserWidget widget;
-		
+
 		public string FileName {
 			get;
 			private set;
 		}
-		
-		Task<Tuple<AssemblyDefinition, IUnresolvedAssembly>> assemblyLoaderTask;
 
-		public Task<Tuple<AssemblyDefinition, IUnresolvedAssembly>> LoadingTask {
+		Task<AssemblyDefinition> assemblyLoaderTask;
+		TaskCompletionSource<AssemblyDefinition> assemblyDefinitionTaskSource;
+
+		public Task<AssemblyDefinition> LoadingTask {
 			get {
 				return assemblyLoaderTask;
 			}
@@ -55,25 +57,37 @@ namespace MonoDevelop.AssemblyBrowser
 			}
 		}
 
-		public AssemblyDefinition Assembly {
+		public AssemblyDefinition Assembly => AssemblyTask.Result;
+		public Task<AssemblyDefinition> AssemblyTask => assemblyDefinitionTaskSource.Task;
+
+		public ModuleDefinition ModuleDefinition {
 			get {
-				return assemblyLoaderTask.Result?.Item1;
+				return assemblyLoaderTask.Result.MainModule;
 			}
 		}
 
-		public IUnresolvedAssembly UnresolvedAssembly {
+		CSharpDecompiler csharpDecompiler;
+
+		public CSharpDecompiler CSharpDecompiler {
 			get {
-				return assemblyLoaderTask.Result.Item2;
+				if (csharpDecompiler == null) {
+					csharpDecompiler = new CSharpDecompiler (DecompilerTypeSystem, new ICSharpCode.Decompiler.DecompilerSettings ());
+				}
+
+				return csharpDecompiler;
 			}
 		}
 
-		CecilLoader loader;
-		internal CecilLoader CecilLoader {
-			get {
-				return loader;
+		DecompilerTypeSystem decompilerTypeSystem;
+		public DecompilerTypeSystem DecompilerTypeSystem { 
+			get { 
+				if (decompilerTypeSystem == null) {
+					decompilerTypeSystem = new DecompilerTypeSystem (Assembly.MainModule);
+
+				}
+				return decompilerTypeSystem; 
 			}
 		}
-
 
 		public AssemblyLoader (AssemblyBrowserWidget widget, string fileName)
 		{
@@ -86,23 +100,20 @@ namespace MonoDevelop.AssemblyBrowser
 			if (!File.Exists (fileName))
 				throw new ArgumentException ("File doesn't exist.", nameof (fileName));
 
-			loader = new CecilLoader (true);
-			loader.InterningProvider = new FastNonInterningProvider ();
-			loader.IncludeInternalMembers = true;
-			loader.LazyLoad = true;
+			assemblyDefinitionTaskSource = new TaskCompletionSource<AssemblyDefinition> ();
 
-			assemblyLoaderTask = Task.Run ( () => {
+			assemblyLoaderTask = Task.Run (() => {
 				try {
-					var asm = AssemblyDefinition.ReadAssembly (FileName, new ReaderParameters {
+					var assemblyDefinition = AssemblyDefinition.ReadAssembly (FileName, new ReaderParameters {
 						AssemblyResolver = this
 					});
-					var loadedAssembley = loader.LoadAssembly (asm);
-					return Tuple.Create (asm, loadedAssembley);
+					assemblyDefinitionTaskSource.SetResult (assemblyDefinition);
+					return assemblyDefinition;
 				} catch (Exception e) {
 					LoggingService.LogError ("Error while reading assembly " + FileName, e);
 					return null;
 				}
-			}, src.Token);
+			});
 		}
 
 		class FastNonInterningProvider : InterningProvider
@@ -143,23 +154,23 @@ namespace MonoDevelop.AssemblyBrowser
 			var loader = widget.AddReferenceByAssemblyName (name);
 			return loader != null ? loader.Assembly : null;
 		}
-		
+
 		AssemblyDefinition IAssemblyResolver.Resolve (AssemblyNameReference name, ReaderParameters parameters)
 		{
 			var loader = widget.AddReferenceByAssemblyName (name);
 			return loader != null ? loader.Assembly : null;
 		}
 		#endregion
-		
+
 		public string LookupAssembly (string fullAssemblyName)
 		{
 			var assemblyFile = Runtime.SystemAssemblyService.DefaultAssemblyContext.GetAssemblyLocation (fullAssemblyName, null);
 			if (assemblyFile != null && File.Exists (assemblyFile))
 				return assemblyFile;
-			
+
 			var name = AssemblyNameReference.Parse (fullAssemblyName);
 			var path = Path.GetDirectoryName (FileName);
-			
+
 			var dll = Path.Combine (path, name.Name + ".dll");
 			if (File.Exists (dll))
 				return dll;

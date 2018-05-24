@@ -84,10 +84,12 @@ namespace MonoDevelop.Projects.MSBuild
 
 		public void Evaluate ()
 		{
-			if (projectInstance != null)
-				engine.DisposeProjectInstance (projectInstance);
+			object oldProjectInstance = null;
+			if (projectInstance != null) {
+				oldProjectInstance = projectInstance;
+			}
 
-			info = msproject.LoadNativeInstance ();
+			info = msproject.LoadNativeInstance (!OnlyEvaluateProperties);
 
 			engine = info.Engine;
 			projectInstance = engine.CreateProjectInstance (info.Project);
@@ -103,13 +105,16 @@ namespace MonoDevelop.Projects.MSBuild
 				foreach (var prop in globalProperties)
 					engine.SetGlobalProperty (projectInstance, prop.Key, prop.Value);
 
-				engine.Evaluate (projectInstance);
+				engine.Evaluate (projectInstance, OnlyEvaluateProperties);
 
 				SyncBuildProject (info.ItemMap, info.Engine, projectInstance);
 			} catch (Exception ex) {
 				// If the project can't be evaluated don't crash
 				LoggingService.LogError ("MSBuild project could not be evaluated", ex);
 				throw new ProjectEvaluationException (msproject, ex.Message);
+			} finally {
+				if (oldProjectInstance != null)
+					engine.DisposeProjectInstance (oldProjectInstance);
 			}
 		}
 

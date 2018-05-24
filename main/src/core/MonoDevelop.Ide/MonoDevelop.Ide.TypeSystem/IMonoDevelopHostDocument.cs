@@ -19,22 +19,14 @@ namespace MonoDevelop.Ide.TypeSystem
 
 	static class MonoDevelopHostDocumentRegistration
 	{
-		internal static void Register (Document document, IMonoDevelopHostDocument hostDocument)
+		internal static void Register (ITextBuffer textBuffer, IMonoDevelopHostDocument hostDocument)
 		{
-			if (document.TryGetText (out SourceText sourceText)) {
-				ITextBuffer textBuffer = sourceText.Container.TryGetTextBuffer ();
-
-				textBuffer?.Properties.AddProperty (typeof (IMonoDevelopHostDocument), hostDocument);
-			}
+			textBuffer?.Properties.AddProperty (typeof (IMonoDevelopHostDocument), hostDocument);
 		}
 
-		internal static void UnRegister(Document document)
+		internal static void UnRegister(ITextBuffer textBuffer)
 		{
-			if (document.TryGetText (out SourceText sourceText)) {
-				ITextBuffer textBuffer = sourceText.Container.TryGetTextBuffer ();
-
-				textBuffer?.Properties.RemoveProperty (typeof (IMonoDevelopHostDocument));
-			}
+			textBuffer?.Properties.RemoveProperty (typeof (IMonoDevelopHostDocument));
 		}
 
 		internal static IMonoDevelopHostDocument FromDocument(Document document)
@@ -42,8 +34,11 @@ namespace MonoDevelop.Ide.TypeSystem
 			IMonoDevelopHostDocument containedDocument = null;
 			if (document.TryGetText (out SourceText sourceText)) {
 				ITextBuffer textBuffer = sourceText.Container.TryGetTextBuffer ();
-
-				containedDocument = textBuffer?.Properties.GetProperty<IMonoDevelopHostDocument> (typeof (IMonoDevelopHostDocument));
+				var properties = textBuffer?.Properties;
+				if (properties == null)
+					return null;
+				if (properties.ContainsProperty (typeof (IMonoDevelopHostDocument)))
+					containedDocument = properties.GetProperty<IMonoDevelopHostDocument> (typeof (IMonoDevelopHostDocument));
 			}
 
 			return containedDocument;

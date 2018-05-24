@@ -123,8 +123,8 @@ namespace MonoDevelop.CodeActions
 			}
 		}
 
-		static ICodeFixService codeFixService = Ide.Composition.CompositionManager.GetExportedValue<ICodeFixService> ();
-		static ICodeRefactoringService codeRefactoringService = Ide.Composition.CompositionManager.GetExportedValue<ICodeRefactoringService> ();
+		ICodeFixService codeFixService = Ide.Composition.CompositionManager.GetExportedValue<ICodeFixService> ();
+		ICodeRefactoringService codeRefactoringService = Ide.Composition.CompositionManager.GetExportedValue<ICodeRefactoringService> ();
 		internal Task<CodeActionContainer> GetCurrentFixesAsync (CancellationToken cancellationToken)
 		{
 			var loc = Editor.CaretOffset;
@@ -173,7 +173,15 @@ namespace MonoDevelop.CodeActions
 
 		async void PopupQuickFixMenu (Gdk.EventButton evt, Action<CodeFixMenu> menuAction)
 		{
-			var menu = await CodeFixMenuService.CreateFixMenu (Editor, await GetCurrentFixesAsync(default (CancellationToken)));
+			var token = quickFixCancellationTokenSource.Token;
+
+			var fixes = await GetCurrentFixesAsync (token);
+			if (token.IsCancellationRequested)
+				return;
+
+			var menu = CodeFixMenuService.CreateFixMenu (Editor, fixes, token);
+			if (token.IsCancellationRequested)
+				return;
 
 			if (menu.Items.Count == 0) {
 				return;
@@ -317,10 +325,6 @@ namespace MonoDevelop.CodeActions
 			Editor.CaretPositionChanged += HandleCaretPositionChanged;
 			Editor.TextChanged += Editor_TextChanged;
 			Editor.EndAtomicUndoOperation += Editor_EndAtomicUndoOperation;
-
-			DocumentContext.RoslynWorkspace.Options = DocumentContext.RoslynWorkspace.Options.WithChangedOption (
-				Microsoft.CodeAnalysis.SymbolSearch.SymbolSearchOptions.SuggestForTypesInNuGetPackages, LanguageNames.CSharp, true);
-
 		}
 
 		void Editor_EndAtomicUndoOperation (object sender, EventArgs e)

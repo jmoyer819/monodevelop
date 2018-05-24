@@ -106,7 +106,21 @@ namespace MonoDevelop.Debugger
 				// Refresh the evaluators list
 				evaluators = null;
 			});
+			IdeApp.Exiting += IdeApp_Exiting;
 		}
+
+		static void IdeApp_Exiting (object sender, ExitEventArgs args)
+		{
+			if (!IsDebugging)
+				return;
+			if (MessageService.Confirm (GettextCatalog.GetString (
+						"The debugger is currently running and will have to be stopped. Do you want to stop debugging?"),
+						new AlertButton (GettextCatalog.GetString ("Stop Debugging")))) {
+				Stop ();
+			} else
+				args.Cancel = true;
+		}
+
 
 		public static IExecutionHandler GetExecutionHandler ()
 		{
@@ -1313,6 +1327,25 @@ namespace MonoDevelop.Debugger
 			var info = EvaluatorForExtension (extension);
 
 			return info != null ? info.Evaluator : null;
+		}
+
+		static Task<CompletionData> GetExpressionCompletionData (string exp, StackFrame frame, CancellationToken token)
+		{
+			Document doc = IdeApp.Workbench.GetDocument (frame.SourceLocation.FileName);
+			if (doc == null)
+				return null;
+			var completionProvider = doc.GetContent<IDebuggerCompletionProvider> ();
+			if (completionProvider == null)
+				return null;
+			return completionProvider.GetExpressionCompletionData (exp, frame, token);
+		}
+
+		public static async Task<CompletionData> GetCompletionDataAsync (StackFrame frame, string exp, CancellationToken token = default (CancellationToken))
+		{
+			var result = await GetExpressionCompletionData (exp, frame, token);
+			if (result != null)
+				return result;
+			return frame.GetExpressionCompletionData (exp);
 		}
 	}
 

@@ -85,7 +85,8 @@ namespace MonoDevelop.Core
 
 			Platform.Initialize ();
 
-			mainThread = Thread.CurrentThread;
+			mainThread = mainThread ?? Thread.CurrentThread;
+
 			// Set a default sync context
 			if (SynchronizationContext.Current == null) {
 				defaultSynchronizationContext = new SynchronizationContext ();
@@ -298,24 +299,15 @@ namespace MonoDevelop.Core
 			set {
 				if (mainSynchronizationContext != null && value != null)
 					throw new InvalidOperationException ("The main synchronization context has already been set");
+
+				mainThread = Thread.CurrentThread;
 				mainSynchronizationContext = value;
-				taskScheduler = null;
+				taskScheduler = new SynchronizationContextTaskScheduler (value);
 			}
 		}
-
 
 		static TaskScheduler taskScheduler;
-		public static TaskScheduler MainTaskScheduler {
-			get {
-				if (taskScheduler == null)
-					RunInMainThread (() => {
-						if (taskScheduler == null)
-							taskScheduler = TaskScheduler.FromCurrentSynchronizationContext ();
-					}).Wait ();
-
-				return taskScheduler;
-			}
-		}
+		public static TaskScheduler MainTaskScheduler => taskScheduler;
 
 		/// <summary>
 		/// Runs an action in the main thread (usually the UI thread). The method returns a task, so it can be awaited.
@@ -415,6 +407,11 @@ namespace MonoDevelop.Core
 				return ts.Task;
 			}
 		}
+
+		/// <summary>
+		/// The main UI thread of the application. Needed to initialize the JoinableTaskContext.
+		/// </summary>
+		public static Thread MainThread => mainThread;
 
 		/// <summary>
 		/// Returns true if current thread is GUI thread.
@@ -556,7 +553,10 @@ namespace MonoDevelop.Core
 		public readonly ConfigurationProperty<bool> EnableAutomatedTesting = ConfigurationProperty.Create ("MonoDevelop.EnableAutomatedTesting", false);
 		public readonly ConfigurationProperty<string> UserInterfaceLanguage = ConfigurationProperty.Create ("MonoDevelop.Ide.UserInterfaceLanguage", "");
 		public readonly ConfigurationProperty<MonoDevelop.Projects.MSBuild.MSBuildVerbosity> MSBuildVerbosity = ConfigurationProperty.Create ("MonoDevelop.Ide.MSBuildVerbosity", MonoDevelop.Projects.MSBuild.MSBuildVerbosity.Normal);
-		public readonly ConfigurationProperty<bool> BuildWithMSBuild = ConfigurationProperty.Create ("MonoDevelop.Ide.BuildWithMSBuild", true);
+
+		[Obsolete]
+		public readonly ConfigurationProperty<bool> BuildWithMSBuild = ConfigurationProperty.CreateObsolete (true);
+
 		public readonly ConfigurationProperty<bool> SkipBuildingUnmodifiedProjects = ConfigurationProperty.Create ("MonoDevelop.Ide.SkipBuildingUnmodifiedProjects", false);
 		public readonly ConfigurationProperty<bool> ParallelBuild = ConfigurationProperty.Create ("MonoDevelop.ParallelBuild", true);
 

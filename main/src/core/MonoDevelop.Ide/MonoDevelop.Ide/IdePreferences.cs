@@ -33,6 +33,7 @@ using MonoDevelop.Ide.Fonts;
 using MonoDevelop.Ide.Editor;
 using MonoDevelop.Ide.Editor.Highlighting;
 using System.Linq;
+using MonoDevelop.Ide.RoslynServices.Options;
 
 namespace MonoDevelop.Ide
 {
@@ -66,8 +67,10 @@ namespace MonoDevelop.Ide
 	
 	public class IdePreferences
 	{
+		internal RoslynPreferences Roslyn { get; }
 		internal IdePreferences ()
 		{
+			Roslyn = new RoslynPreferences ();
 		}
 
 		public readonly ConfigurationProperty<bool> EnableInstrumentation = Runtime.Preferences.EnableInstrumentation;
@@ -155,6 +158,7 @@ namespace MonoDevelop.Ide
 		internal static readonly string DefaultDarkColorScheme = "Dark";
 
 		public readonly ConfigurationProperty<bool> EnableSourceAnalysis = ConfigurationProperty.Create ("MonoDevelop.AnalysisCore.AnalysisEnabled_V2", true);
+		public readonly ConfigurationProperty<bool> EnableFullSolutionSourceAnalysis = ConfigurationProperty.Create ("MonoDevelop.AnalysisCore.FullSolutionSourceAnalysis", true);
 		public readonly ConfigurationProperty<bool> EnableUnitTestEditorIntegration = ConfigurationProperty.Create ("Testing.EnableUnitTestEditorIntegration", false);
 
 		public readonly SchemeConfigurationProperty ColorScheme = new SchemeConfigurationProperty ("ColorScheme", DefaultLightColorScheme, DefaultDarkColorScheme);

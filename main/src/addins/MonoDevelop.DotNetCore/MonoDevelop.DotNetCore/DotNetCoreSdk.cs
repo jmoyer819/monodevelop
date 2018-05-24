@@ -1,4 +1,4 @@
-﻿//
+//
 // DotNetCoreSdk.cs
 //
 // Author:
@@ -25,9 +25,11 @@
 // THE SOFTWARE.
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using MonoDevelop.Core;
 using MonoDevelop.Core.Assemblies;
+using MonoDevelop.Projects.MSBuild;
 
 namespace MonoDevelop.DotNetCore
 {
@@ -38,9 +40,17 @@ namespace MonoDevelop.DotNetCore
 			var sdkPaths = new DotNetCoreSdkPaths ();
 			sdkPaths.FindMSBuildSDKsPath ();
 
+			Update (sdkPaths);
+		}
+
+		internal static void Update (DotNetCoreSdkPaths sdkPaths)
+		{
+			RegisterProjectImportSearchPath (MSBuildSDKsPath, sdkPaths.MSBuildSDKsPath);
+
 			MSBuildSDKsPath = sdkPaths.MSBuildSDKsPath;
+			SdkRootPath = sdkPaths.SdkRootPath;
 			IsInstalled = !string.IsNullOrEmpty (MSBuildSDKsPath);
-			Versions = sdkPaths.SdkVersions ?? new DotNetCoreVersion [0];
+			Versions = sdkPaths.SdkVersions ?? Array.Empty<DotNetCoreVersion> ();
 
 			if (!IsInstalled)
 				LoggingService.LogInfo (".NET Core SDK not found.");
@@ -49,8 +59,20 @@ namespace MonoDevelop.DotNetCore
 				SetFSharpShims ();
 		}
 
+		static void RegisterProjectImportSearchPath (string oldPath, string newPath)
+		{
+			const string propertyName = "MSBuildSDKsPath";
+
+			if (!string.IsNullOrEmpty (oldPath))
+				MSBuildProjectService.UnregisterProjectImportSearchPath (propertyName, oldPath);
+
+			if (!string.IsNullOrEmpty (newPath))
+				MSBuildProjectService.RegisterProjectImportSearchPath (propertyName, newPath);
+		}
+
 		public static bool IsInstalled { get; private set; }
 		public static string MSBuildSDKsPath { get; private set; }
+		internal static string SdkRootPath { get; private set; }
 
 		internal static DotNetCoreVersion[] Versions { get; private set; }
 
@@ -91,7 +113,7 @@ namespace MonoDevelop.DotNetCore
 
 			var projectFrameworkVersion = Version.Parse (projectFramework.Version);
 
-			if (versions.Any (sdkVersion => IsSupported (projectFrameworkVersion, sdkVersion)))
+			if (versions.Any (sdkVersion => IsSupported (projectFramework, projectFrameworkVersion, sdkVersion)))
 				return true;
 
 			// .NET Core 1.x is supported by the MSBuild .NET Core SDKs if they are installed with Mono.
@@ -108,14 +130,33 @@ namespace MonoDevelop.DotNetCore
 		///
 		/// .NET Core SDK 1.0.4 supports .NET Core 1.0 and 1.1
 		/// .NET Core SDK 1.0.4 supports .NET Standard 1.0 to 1.6
-		/// .NET Core SDK 2.0 supports 1.0, 1.1 and 2.0
+		/// .NET Core SDK 2.0 supports .NET Core 1.0, 1.1 and 2.0
 		/// .NET Core SDK 2.0 supports .NET Standard 1.0 to 1.6 and 2.0
-		/// .NET Core SDK 2.1 supports 1.0, 1.1 and 2.0
-		/// .NET Core SDK 2.1 supports .NET Standard 1.0 to 1.6 and 2.0
+		/// .NET Core SDK 2.1.x (x &lt; 300) supports .NET Core 1.0, 1.1 and 2.0
+		/// .NET Core SDK 2.1.x (x &lt; 300) supports .NET Standard 1.0 to 1.6 and 2.0
+		/// .NET Core 2.1.300 supports .NET Core 1.0, 1.1, 2.0 and 2.1
+		/// .NET Core 2.1.300 supports .NET Standard 1.0 to 1.6, and 2.0, 2.1
 		/// </summary>
-		static bool IsSupported (Version projectFrameworkVersion, DotNetCoreVersion sdkVersion)
+		static bool IsSupported (TargetFrameworkMoniker projectFramework, Version projectFrameworkVersion, DotNetCoreVersion sdkVersion)
 		{
+			// Special case .NET Core 2.1.
+			if (IsNetCore21 (projectFramework, projectFrameworkVersion) && !SupportsNetCore21 (sdkVersion))
+				return false;
+
 			return sdkVersion.Major >= projectFrameworkVersion.Major;
+		}
+
+		static bool IsNetCore21 (TargetFrameworkMoniker framework, Version version)
+		{
+			return framework.IsNetCoreApp () && version.Major == 2 && version.Minor == 1;
+		}
+
+		/// <summary>
+		/// .NET Core 2.1.300 SDK is the lowest version that supports .NET Core App 2.1
+		/// </summary>
+		static bool SupportsNetCore21 (DotNetCoreVersion version)
+		{
+			return version.Major >= 2 && version.Minor >= 1 && version.Patch >= 300;
 		}
 
 		/// <summary>
@@ -137,6 +178,30 @@ namespace MonoDevelop.DotNetCore
 				Environment.SetEnvironmentVariable ("FSharpPropsShim", directory.Combine ("Microsoft.FSharp.NetSdk.props").FullPath);
 				Environment.SetEnvironmentVariable ("FSharpTargetsShim", directory.Combine ("Microsoft.FSharp.NetSdk.targets").FullPath);
 			}
+		}
+
+		/// <summary>
+		/// Used by unit tests to fake having different .NET Core sdks installed.
+		/// </summary>
+		internal static void SetVersions (IEnumerable<DotNetCoreVersion> versions)
+		{
+			Versions = versions.ToArray ();
+		}
+
+		/// <summary>
+		/// Used by unit tests to fake having the sdk installed.
+		/// </summary>
+		internal static void SetInstalled (bool installed)
+		{
+			IsInstalled = installed;
+		}
+
+		/// <summary>
+		/// Used by unit tests to fake having the sdk installed.
+		/// </summary>
+		internal static void SetSdkRootPath (string path)
+		{
+			SdkRootPath = path;
 		}
 	}
 }

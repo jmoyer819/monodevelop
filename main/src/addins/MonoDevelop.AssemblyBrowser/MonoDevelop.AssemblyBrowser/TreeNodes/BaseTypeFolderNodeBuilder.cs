@@ -35,7 +35,7 @@ using MonoDevelop.Ide.Gui;
 using MonoDevelop.Ide.Gui.Pads;
 using MonoDevelop.Ide.Gui.Components;
 using System.Linq;
-using ICSharpCode.NRefactory.TypeSystem;
+using ICSharpCode.Decompiler.TypeSystem;
 
 namespace MonoDevelop.AssemblyBrowser
 {
@@ -100,7 +100,8 @@ namespace MonoDevelop.AssemblyBrowser
 		public override void BuildChildNodes (ITreeBuilder builder, object dataObject)
 		{
 			var baseTypeFolder = (BaseTypeFolder)dataObject;
-			builder.AddChildren (baseTypeFolder.Type.BaseTypes);
+			builder.AddChild (baseTypeFolder.Type.BaseType);
+			builder.AddChildren (baseTypeFolder.Type.Interfaces);
 		}
 		public override bool HasChildNodes (ITreeBuilder builder, object dataObject)
 		{

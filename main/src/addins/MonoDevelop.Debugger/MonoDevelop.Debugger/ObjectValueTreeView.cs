@@ -488,7 +488,12 @@ namespace MonoDevelop.Debugger
 			if (!this.Model.GetIterFirst (out iter))
 				return;
 			foreach (var column in new [] { expCol, valueCol }) {//No need to calculate for Type and PinIcon columns
-				column.FixedWidth = GetMaxWidth (column, iter);
+				// +1 is here because apperently when we calculate MaxWidth and set to FixedWidth
+				// later GTK when cacluate needed width for Label it doesn't have enough space
+				// and puts "..." to end of text thinking there is not enough space
+				// I assume this is because rounding(floating point) calculation errors
+				// hence do +1 and avoid such problems.
+				column.FixedWidth = GetMaxWidth (column, iter) + 1;
 			}
 		}
 
@@ -1603,20 +1608,24 @@ namespace MonoDevelop.Debugger
 		{
 			return char.IsLetter (c) || c == '_' || c == '.';
 		}
-
-		void PopupCompletion (Entry entry)
+		CancellationTokenSource cts = new CancellationTokenSource ();
+		async void PopupCompletion (Entry entry)
 		{
-			char c = (char)Gdk.Keyval.ToUnicode (keyValue);
-			if (currentCompletionData == null && IsCompletionChar (c)) {
-				string expr = entry.Text.Substring (0, entry.CursorPosition);
-				currentCompletionData = GetCompletionData (expr);
-				if (currentCompletionData != null) {
-					DebugCompletionDataList dataList = new DebugCompletionDataList (currentCompletionData);
-					ctx = ((ICompletionWidget)this).CreateCodeCompletionContext (expr.Length - currentCompletionData.ExpressionLength);
-					CompletionWindowManager.ShowWindow (null, c, dataList, this, ctx);
-				} else {
-					currentCompletionData = null;
+			try {
+				char c = (char)Gdk.Keyval.ToUnicode (keyValue);
+				if (currentCompletionData == null && IsCompletionChar (c)) {
+					string expr = entry.Text.Substring (0, entry.CursorPosition);
+					cts.Cancel ();
+					cts = new CancellationTokenSource ();
+					currentCompletionData = await GetCompletionData (expr, cts.Token);
+					if (currentCompletionData != null) {
+						DebugCompletionDataList dataList = new DebugCompletionDataList (currentCompletionData);
+						ctx = ((ICompletionWidget)this).CreateCodeCompletionContext (expr.Length - currentCompletionData.ExpressionLength);
+						CompletionWindowManager.ShowWindow (null, c, dataList, this, ctx);
+					}
 				}
+
+			} catch (OperationCanceledException) {
 			}
 		}
 
@@ -2433,10 +2442,10 @@ namespace MonoDevelop.Debugger
 			return values;
 		}
 		
-		Mono.Debugging.Client.CompletionData GetCompletionData (string exp)
+		async Task<Mono.Debugging.Client.CompletionData> GetCompletionData (string exp, CancellationToken token)
 		{
 			if (CanQueryDebugger && frame != null)
-				return frame.GetExpressionCompletionData (exp);
+				return await DebuggingService.GetCompletionDataAsync (frame, exp, token);
 
 			return null;
 		}

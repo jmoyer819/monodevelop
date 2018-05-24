@@ -1,4 +1,4 @@
-﻿//
+//
 // TargetFrameworkExtensions.cs
 //
 // Author:
@@ -67,16 +67,16 @@ namespace MonoDevelop.DotNetCore
 			return framework.Id.IsNetCoreApp ();
 		}
 
-		public static bool IsNetCoreApp20 (this TargetFramework framework)
-		{
-			return framework.IsNetCoreApp () &&
-				framework.Id.Version == "2.0";
-		}
-
 		public static bool IsNetCoreApp21 (this TargetFramework framework)
 		{
 			return framework.IsNetCoreApp () &&
 				framework.Id.Version == "2.1";
+		}
+
+		public static bool IsNetCoreApp20 (this TargetFramework framework)
+		{
+			return framework.IsNetCoreApp () &&
+				framework.Id.Version == "2.0";
 		}
 
 		public static bool IsNetCoreApp1x (this TargetFramework framework)
@@ -92,7 +92,7 @@ namespace MonoDevelop.DotNetCore
 
 		public static bool IsNetStandard20OrNetCore20 (this TargetFramework framework)
 		{
-			return framework.IsNetStandard20 () || framework.IsNetCoreApp ();
+			return framework.IsNetStandard20 () || framework.IsNetCoreApp20 ();
 		}
 
 		public static string GetDisplayName (this TargetFramework framework)

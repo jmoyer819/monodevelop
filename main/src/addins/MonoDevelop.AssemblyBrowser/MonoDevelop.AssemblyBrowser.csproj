@@ -46,21 +46,15 @@
   <ItemGroup>
     <Reference Include="Mono.Posix" />
     <Reference Include="System" />
-    <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="ICSharpCode.Decompiler">
+      <HintPath>..\..\..\packages\ICSharpCode.Decompiler.3.0.0.3403-beta4\lib\net46\ICSharpCode.Decompiler.dll</HintPath>
+      <Private>false</Private>
     </Reference>
-    <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="pango-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="atk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
-    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f">
-      <SpecificVersion>False</SpecificVersion>
-    </Reference>
+    <Reference Include="gtk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="gdk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="pango-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="atk-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
+    <Reference Include="glib-sharp, Version=2.12.0.0, Culture=neutral, PublicKeyToken=35e10195dab3c99f" />
     <Reference Include="System.Core" />
     <Reference Include="Mono.Cairo" />
     <Reference Include="monodoc, Version=1.0.0.0, Culture=neutral, PublicKeyToken=0738eb9f132ed756" />
@@ -93,6 +87,15 @@
       <HintPath>..\..\..\packages\Mono.Cecil.0.10.0-beta6\lib\net40\Mono.Cecil.Rocks.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="mscorlib" />
+    <Reference Include="System.ValueTuple">
+      <HintPath>..\..\..\build\bin\System.ValueTuple.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Microsoft.CodeAnalysis.Workspaces">
+      <HintPath>..\..\..\build\bin\Microsoft.CodeAnalysis.Workspaces.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\core\MonoDevelop.Core\MonoDevelop.Core.csproj">
@@ -115,29 +118,9 @@
       <Name>CSharpBinding</Name>
       <Private>False</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\contrib\ICSharpCode.Decompiler\ICSharpCode.Decompiler.csproj">
-      <Project>{984CC812-9470-4A13-AFF9-CC44068D666C}</Project>
-      <Name>ICSharpCode.Decompiler</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory\ICSharpCode.NRefactory.csproj">
-      <Project>{3B2A5653-EC97-4001-BB9B-D90F1AF2C371}</Project>
-      <Name>ICSharpCode.NRefactory</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory.CSharp\ICSharpCode.NRefactory.CSharp.csproj">
-      <Project>{53DCA265-3C3C-42F9-B647-F72BA678122B}</Project>
-      <Name>ICSharpCode.NRefactory.CSharp</Name>
-      <Private>False</Private>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\external\mono-addins\Mono.Addins\Mono.Addins.csproj">
       <Project>{91DD5A2D-9FE3-4C3C-9253-876141874DAD}</Project>
       <Name>Mono.Addins</Name>
-      <Private>False</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\external\nrefactory\ICSharpCode.NRefactory.Cecil\ICSharpCode.NRefactory.Cecil.csproj">
-      <Project>{2B8F4F83-C2B3-4E84-A27B-8DEE1BE0E006}</Project>
-      <Name>ICSharpCode.NRefactory.Cecil</Name>
       <Private>False</Private>
     </ProjectReference>
     <ProjectReference Include="..\..\..\external\xwt\Xwt\Xwt.csproj">
@@ -150,22 +133,14 @@
     <Compile Include="AssemblyInfo.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\DisplayBinding.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserWidget.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\Namespace.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\Error.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\BaseTypeFolder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\IAssemblyBrowserNodeBuilder.cs" />
-    <Compile Include="gtk-gui\generated.cs" />
-    <Compile Include="gtk-gui\MonoDevelop.AssemblyBrowser.AssemblyBrowserWidget.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\DocumentationPanel.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\ColoredCSharpFormatter.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\DomEventNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\DomFieldNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\DomMethodNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\DomPropertyNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\DomTypeNodeBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\AssemblyBrowserTypeNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\AssemblyNodeBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\BaseTypeFolderNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\MethodBodyRemoveVisitor.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\NamespaceBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\ResourceNodeBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\ErrorNodeBuilder.cs" />
@@ -173,33 +148,45 @@
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\AssemblyReferenceNodeBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\AssemblyReferenceFolderNodeBuilder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\AssemblyResourceFolderNodeBuilder.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserHandler.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyResourceFolder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserViewContent.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyReferenceFolder.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyLoader.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\ProjectNodeBuilder.cs" />
     <Compile Include="XmlDocIdLib\CompatibilityType.cs" />
     <Compile Include="XmlDocIdLib\OperatorType.cs" />
     <Compile Include="XmlDocIdLib\XmlDocIdGenerator.cs" />
     <Compile Include="AddinInfo.cs" />
-    <Compile Include="MonoDevelop.AssemblyBrowser\NRefactoryStock.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\HelpExtensions.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserNavigationPoint.cs" />
     <Compile Include="MonoDevelop.AssemblyBrowser\UnresolvedIdStringProvider.cs" />
+    <Compile Include="Gui\MonoDevelop.AssemblyBrowser.AssemblyBrowserWidget.cs" />
+    <Compile Include="Util\CSharpLanguage.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\EventDefinitionNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\FieldDefinitionNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\MethodDefinitionNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\PropertyDefinitionNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\TypeDefinitionNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\ProjectNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynEventNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynFieldNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynMemberNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynMethodNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynPropertyNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Roslyn\RoslynTypeNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\NamespaceData.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\TreeNodes\Cecil\AssemblyNodeBuilder.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserHandler.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserWidget.AssemblyBrowserTreeView.cs" />
+    <Compile Include="MonoDevelop.AssemblyBrowser\AssemblyBrowserWidget.SearchIdleRunner.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="gtk-gui\gui.stetic">
-      <LogicalName>gui.stetic</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="MonoDevelop.AssemblyBrowser.addin.xml">
       <LogicalName>MonoDevelop.AssemblyBrowser.addin.xml</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Folder Include="MonoDevelop.AssemblyBrowser\TreeNodes\" />
-    <Folder Include="XmlDocIdLib\" />
+    <Folder Include="Gui\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

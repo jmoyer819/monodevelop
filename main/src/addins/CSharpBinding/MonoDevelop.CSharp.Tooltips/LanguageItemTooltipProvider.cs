@@ -52,10 +52,10 @@ namespace MonoDevelop.SourceEditor
 		{
 			if (ctx == null)
 				return null;
-			var analysisDocument = ctx.ParsedDocument;
+			var analysisDocument = ctx.AnalysisDocument;
 			if (analysisDocument == null)
 				return null;
-			var unit = analysisDocument.GetAst<SemanticModel> ();
+			var unit = await analysisDocument.GetSemanticModelAsync (token);
 			if (unit == null)
 				return null;
 
@@ -159,11 +159,6 @@ namespace MonoDevelop.SourceEditor
 			var win = (TooltipInformationWindow)tipWindow;
 			requiredWidth = (int)win.Width;
 			xalign = 0.5;
-		}
-
-		public override bool IsInteractive(TextEditor editor, Components.Window tipWindow)
-		{
-			return true;
 		}
 		#endregion
 

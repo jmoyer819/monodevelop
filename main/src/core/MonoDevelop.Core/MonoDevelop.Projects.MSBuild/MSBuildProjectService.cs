@@ -26,25 +26,19 @@
 //
 
 using System;
-using System.Linq;
-using System.Diagnostics;
 using System.Collections.Generic;
-using System.IO;
 using System.Globalization;
-using System.Runtime.Serialization.Formatters.Binary;
-using Mono.Addins;
-using MonoDevelop.Core.ProgressMonitoring;
-using MonoDevelop.Projects;
-using MonoDevelop.Projects.Extensions;
-using MonoDevelop.Core.Serialization;
-using MonoDevelop.Core;
-using MonoDevelop.Core.Assemblies;
-using Cecil = Mono.Cecil;
-using System.Threading;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Xml;
-using MonoDevelop.Core.Execution;
 using System.Xml.Linq;
+using Mono.Addins;
+using MonoDevelop.Core;
+using MonoDevelop.Core.Assemblies;
+using MonoDevelop.Core.ProgressMonitoring;
+using MonoDevelop.Core.Serialization;
+using MonoDevelop.Projects.Extensions;
 
 namespace MonoDevelop.Projects.MSBuild
 {
@@ -60,9 +54,10 @@ namespace MonoDevelop.Projects.MSBuild
 		public const string GenericItemGuid = "{9344BDBB-3E7F-41FC-A0DD-8665D75EE146}";
 		public const string FolderTypeGuid = "{2150E333-8FDC-42A3-9474-1A3956D46DE8}";
 
-		//NOTE: default toolsversion should match the default format.
-		// remember to update the builder process' app.config too
+		[Obsolete ("This no longer has any purpose")]
 		public const string DefaultFormat = "MSBuild12";
+
+		internal const string ToolsVersion = "15.0";
 
 		static DataContext dataContext;
 
@@ -271,9 +266,7 @@ namespace MonoDevelop.Projects.MSBuild
 
 		internal static string GetDefaultSdksPath (TargetRuntime runtime)
 		{
-			string binDir;
-			GetNewestInstalledToolsVersion (runtime, true, out binDir);
-			return Path.Combine (binDir, "Sdks");
+			return Path.Combine (GetMSBuildBinPath (runtime), "Sdks");
 		}
 
 		internal static IEnumerable<SdkInfo> FindRegisteredSdks ()
@@ -300,8 +293,7 @@ namespace MonoDevelop.Projects.MSBuild
 				list = new List<ImportSearchPathExtensionNode> ();
 				defaultImportSearchPaths [runtime] = list;
 
-				string binDir;
-				GetNewestInstalledToolsVersion (runtime, true, out binDir);
+				string binDir = GetMSBuildBinPath (runtime);
 
 				var configFileName = Platform.IsWindows ? "MSBuild.exe.config" : "MSBuild.dll.config";
 				var configFile = Path.Combine (binDir, configFileName);
@@ -560,17 +552,19 @@ namespace MonoDevelop.Projects.MSBuild
 			return copy ?? types;
 		}
 
-		internal static MSBuildSupport GetMSBuildSupportForFlavors (IEnumerable<string> flavorGuids)
+		internal static bool GetMSBuildSupportForFlavors (IEnumerable<string> flavorGuids)
 		{
+			#pragma warning disable 612
 			foreach (var fid in flavorGuids) {
 				var node = WorkspaceObject.GetModelExtensions (null).OfType<SolutionItemExtensionNode> ().FirstOrDefault (n => n.Guid != null && n.Guid.Equals (fid, StringComparison.InvariantCultureIgnoreCase));
 				if (node != null) {
-					if (node.MSBuildSupport != MSBuildSupport.Supported)
-						return node.MSBuildSupport;
+					if (node.MSBuildSupport == MSBuildSupport.NotSupported)
+						return false;
 				} else if (!IsKnownTypeGuid (fid))
 					throw new UnknownSolutionItemTypeException (fid);
 			}
-			return MSBuildSupport.Supported;
+			return true;
+			#pragma warning restore 612
 		}
 
 		internal static List<SolutionItemExtensionNode> GetMigrableFlavors (string[] flavorGuids)
@@ -700,15 +694,10 @@ namespace MonoDevelop.Projects.MSBuild
 			return null;
 		}
 
+		[Obsolete]
 		public static void CheckHandlerUsesMSBuildEngine (SolutionFolderItem item, out bool useByDefault, out bool require)
 		{
-			var handler = item as Project;
-			if (handler == null) {
-				useByDefault = require = false;
-				return;
-			}
-			useByDefault = handler.MSBuildEngineSupport.HasFlag (MSBuildSupport.Supported);
-			require = handler.MSBuildEngineSupport.HasFlag (MSBuildSupport.Required);
+			useByDefault = require = item is Project proj && proj.MSBuildProject.UseMSBuildEngine;
 		}
 
 		static IEnumerable<SolutionItemTypeNode> GetItemTypeNodes ()
@@ -763,19 +752,21 @@ namespace MonoDevelop.Projects.MSBuild
 			return GenericItemGuid;
 		}
 
-		internal static MSBuildSupport GetMSBuildSupportForProject (Project project)
+		internal static bool UseMSBuildEngineForProject (Project project)
 		{
-			if (project is UnknownProject)
-				return MSBuildSupport.NotSupported;
+			#pragma warning disable 612
+			if (project is UnknownProject || project is GenericProject)
+				return false;
 			
 			foreach (var node in GetItemTypeNodes ().OfType<ProjectTypeNode> ()) {
 				if (node.Guid.Equals (project.TypeGuid, StringComparison.OrdinalIgnoreCase)) {
 					if (node.MSBuildSupport != MSBuildSupport.Supported)
-						return node.MSBuildSupport;
+						return false;
 					return GetMSBuildSupportForFlavors (project.FlavorGuids);
 				}
 			}
-			return MSBuildSupport.NotSupported;
+			return false;
+			#pragma warning restore 612
 		}
 
 		public static void RegisterGenericProjectType (string projectId, Type type)
@@ -1073,21 +1064,10 @@ namespace MonoDevelop.Projects.MSBuild
 			return true;
 		}
 
-		internal static string GetNewestInstalledToolsVersion (TargetRuntime runtime, bool requiresMicrosoftBuild, out string binDir)
+		internal static string GetMSBuildBinPath (TargetRuntime runtime)
 		{
-			string [] supportedToolsVersions;
-			if (requiresMicrosoftBuild || Runtime.Preferences.BuildWithMSBuild || Platform.IsWindows)
-				supportedToolsVersions = new [] { "15.0"};
-			else
-				supportedToolsVersions = new [] { "14.0", "12.0", "4.0" };
-
-			foreach (var toolsVersion in supportedToolsVersions) {
-				binDir = runtime.GetMSBuildBinPath (toolsVersion);
-				if (binDir != null) {
-					return toolsVersion;
-				}
-			}
-			throw new Exception ("Did not find MSBuild for runtime " + runtime.Id);
+			return runtime.GetMSBuildBinPath (ToolsVersion)
+				?? throw new Exception ("Did not find MSBuild for runtime " + runtime.Id);
 		}
 
 		static Dictionary<string, string> cultureNamesTable;
@@ -1219,7 +1199,9 @@ namespace MonoDevelop.Projects.MSBuild
 		{
 			Guid = MSBuildProjectService.GenericItemGuid;
 			Extension = "mdproj";
+			#pragma warning disable 612
 			MSBuildSupport = MSBuildSupport.NotSupported;
+			#pragma warning restore 612
 			TypeAlias = "GenericProject";
 		}
 

@@ -38,6 +38,7 @@ using MonoDevelop.Refactoring;
 using MonoDevelop.Ide.TypeSystem;
 using MonoDevelop.Ide.Gui;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace MonoDevelop.CSharp.Refactoring
 {
@@ -111,16 +112,16 @@ namespace MonoDevelop.CSharp.Refactoring
 		}
 
 		[CommandUpdateHandler (RefactoryCommands.GotoDeclaration)]
-		public async void GotoDeclaration_Update (CommandInfo ci)
+		public async Task GotoDeclaration_Update (CommandInfo ci, CancellationToken cancellationToken)
 		{
 			var doc = IdeApp.Workbench.ActiveDocument;
 			if (doc == null || doc.FileName == FilePath.Null)
 				return;
-			if (doc.ParsedDocument == null || doc.ParsedDocument.GetAst<SemanticModel> () == null) {
+			if (DocumentContext.AnalysisDocument == null) {
 				ci.Enabled = false;
 				return;
 			}
-			var symbol = await GoToDefinitionService.FindSymbolAsync (base.DocumentContext.AnalysisDocument, Editor.CaretOffset, default(CancellationToken));
+			var symbol = await GoToDefinitionService.FindSymbolAsync (base.DocumentContext.AnalysisDocument, Editor.CaretOffset, cancellationToken);
 			ci.Enabled = symbol != null;
 		}
 

@@ -235,7 +235,6 @@ namespace MonoDevelop.Ide.Gui
 			get { return adhocProject != null; }
 		}
 
-
 		public override bool IsCompileableInProject {
 			get {
 				var project = Project;
@@ -839,6 +838,11 @@ namespace MonoDevelop.Ide.Gui
 			analysisDocumentSrc = new CancellationTokenSource ();
 		}
 
+		/// <summary>
+		/// During that process ad hoc projects shouldn't be created.
+		/// </summary>
+		internal static bool IsInProjectSettingLoadingProcess { get; set; }
+
 		Task EnsureAnalysisDocumentIsOpen ()
 		{
 			if (analysisDocument != null) {
@@ -864,15 +868,15 @@ namespace MonoDevelop.Ide.Gui
 					SubscribeRoslynWorkspace ();
 					analysisDocument = FileName != null ? TypeSystemService.GetDocumentId (this.Project, this.FileName) : null;
 					if (analysisDocument != null && !RoslynWorkspace.IsDocumentOpen(analysisDocument)) {
-						TypeSystemService.InformDocumentOpen (analysisDocument, Editor);
+						TypeSystemService.InformDocumentOpen (analysisDocument, Editor, this);
 						OnAnalysisDocumentChanged (EventArgs.Empty);
-						return Task.CompletedTask;
 					}
+					return Task.CompletedTask;
 				}
 			}
 			lock (adhocProjectLock) {
 				var token = analysisDocumentSrc.Token;
-				if (adhocProject != null) {
+				if (adhocProject != null || IsInProjectSettingLoadingProcess) {
 					return Task.CompletedTask;
 				}
 
@@ -908,7 +912,7 @@ namespace MonoDevelop.Ide.Gui
 							RoslynWorkspace = task.Result.FirstOrDefault (); // 1 solution loaded ->1 workspace as result
 							SubscribeRoslynWorkspace ();
 							analysisDocument = RoslynWorkspace.CurrentSolution.Projects.First ().DocumentIds.First ();
-							TypeSystemService.InformDocumentOpen (RoslynWorkspace, analysisDocument, Editor);
+							TypeSystemService.InformDocumentOpen (RoslynWorkspace, analysisDocument, Editor, this);
 							OnAnalysisDocumentChanged (EventArgs.Empty);
 						});
 					}
@@ -1165,6 +1169,12 @@ namespace MonoDevelop.Ide.Gui
 			} catch (NotSupportedException) {
 				return null;
 			}
+		}
+
+		internal override void UpdateDocumentId (Microsoft.CodeAnalysis.DocumentId newId)
+		{
+			this.analysisDocument = newId;
+			OnAnalysisDocumentChanged (EventArgs.Empty);
 		}
 	}
 	

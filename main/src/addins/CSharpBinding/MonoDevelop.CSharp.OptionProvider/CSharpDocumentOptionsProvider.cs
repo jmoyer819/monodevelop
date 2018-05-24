@@ -43,26 +43,22 @@ namespace MonoDevelop.CSharp.OptionProvider
 {
 	class CSharpDocumentOptionsProvider : IDocumentOptionsProvider
 	{
-		readonly Workspace workspace;
-
-		public CSharpDocumentOptionsProvider (Workspace workspace)
-		{
-			this.workspace = workspace;
-		}
-
 		async Task<IDocumentOptions> IDocumentOptionsProvider.GetOptionsForDocumentAsync (Document document, CancellationToken cancellationToken)
 		{
-			var mdws = (MonoDevelopWorkspace)workspace;
+			var mdws = document.Project.Solution.Workspace as MonoDevelopWorkspace;
 			var project = mdws?.GetMonoProject (document.Project.Id);
+
+			var types = Ide.DesktopService.GetMimeTypeInheritanceChain (CSharpFormatter.MimeType);
+
 			CSharpFormattingPolicy policy;
 			TextStylePolicy textpolicy;
 			if (project == null) {
-				textpolicy = PolicyService.InvariantPolicies.Get<TextStylePolicy> (CSharpFormatter.MimeType);
-				policy = PolicyService.InvariantPolicies.Get<CSharpFormattingPolicy> (CSharpFormatter.MimeType);
+				textpolicy = PolicyService.InvariantPolicies.Get<TextStylePolicy> (types);
+				policy = PolicyService.InvariantPolicies.Get<CSharpFormattingPolicy> (types);
 			} else {
 				var policyParent = project.Policies;
-				policy = policyParent.Get<CSharpFormattingPolicy> (CSharpFormatter.MimeType);
-				textpolicy = policyParent.Get<TextStylePolicy> (CSharpFormatter.MimeType);
+				policy = policyParent.Get<CSharpFormattingPolicy> (types);
+				textpolicy = policyParent.Get<TextStylePolicy> (types);
 			}
 			var path = GetPath (document);
 			ICodingConventionContext conventions = null;
@@ -102,6 +98,7 @@ namespace MonoDevelop.CSharp.OptionProvider
 
 			public bool TryGetDocumentOption (Document document, OptionKey option, OptionSet underlyingOptions, out object value)
 			{
+
 				if (codingConventionsSnapshot != null) {
 					var editorConfigPersistence = option.Option.StorageLocations.OfType<IEditorConfigStorageLocation> ().SingleOrDefault ();
 					if (editorConfigPersistence != null) {
@@ -115,6 +112,7 @@ namespace MonoDevelop.CSharp.OptionProvider
 						}
 					}
 				}
+
 				var result = optionSet.GetOption (option);
 
 				if (result == underlyingOptions.GetOption (option)) {

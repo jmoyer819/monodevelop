@@ -39,6 +39,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Linq;
 
+using Microsoft.CodeAnalysis.Utilities;
+using Microsoft.CodeAnalysis.Editor.Shared.Utilities;
+
 using Mono.Unix;
 
 using Mono.Addins;
@@ -76,10 +79,12 @@ namespace MonoDevelop.Ide
 		int Run (MonoDevelopOptions options)
 		{
 			LoggingService.LogInfo ("Starting {0} {1}", BrandingService.ApplicationLongName, IdeVersionInfo.MonoDevelopVersion);
+			LoggingService.LogInfo ("Build Information{0}{1}", Environment.NewLine, SystemInformation.GetBuildInformation ());
 			LoggingService.LogInfo ("Running on {0}", IdeVersionInfo.GetRuntimeInfo ());
 
 			//ensure native libs initialized before we hit anything that p/invokes
 			Platform.Initialize ();
+			GettextCatalog.Initialize ();
 
 			LoggingService.LogInfo ("Operating System: {0}", SystemInformation.GetOperatingSystemDescription ());
 
@@ -142,7 +147,10 @@ namespace MonoDevelop.Ide
 			// Set a synchronization context for the main gtk thread
 			SynchronizationContext.SetSynchronizationContext (DispatchService.SynchronizationContext);
 			Runtime.MainSynchronizationContext = SynchronizationContext.Current;
-			
+
+			// Initialize Roslyn's synchronization context
+			RoslynServices.RoslynService.Initialize ();
+
 			AddinManager.AddinLoadError += OnAddinError;
 			
 			var startupInfo = new StartupInfo (args);
@@ -162,8 +170,6 @@ namespace MonoDevelop.Ide
 			
 			Counters.Initialization.Trace ("Initializing Runtime");
 			Runtime.Initialize (true);
-
-			Composition.CompositionManager.InitializeAsync ().Ignore ();
 
 			IdeApp.Customizer.OnCoreInitialized ();
 
@@ -300,6 +306,7 @@ namespace MonoDevelop.Ide
 			startupTimer.Stop ();
 			Counters.Startup.Inc (GetStartupMetadata (startupInfo));
 
+			GLib.Idle.Add (OnIdle);
 			IdeApp.Run ();
 
 			IdeApp.Customizer.OnIdeShutdown ();
@@ -317,6 +324,12 @@ namespace MonoDevelop.Ide
 			MonoDevelop.Components.GtkWorkarounds.Terminate ();
 			
 			return 0;
+		}
+
+		static bool OnIdle ()
+		{
+			Composition.CompositionManager.InitializeAsync ().Ignore ();
+			return false;
 		}
 
 		static DateTime lastIdle;
@@ -559,7 +572,7 @@ namespace MonoDevelop.Ide
 		
 		static void HandleException (Exception ex, bool willShutdown)
 		{
-			var msg = String.Format ("An unhandled exception has occured. Terminating {0}? {1}", BrandingService.ApplicationName, willShutdown);
+			var msg = String.Format ("An unhandled exception has occurred. Terminating {0}? {1}", BrandingService.ApplicationName, willShutdown);
 			var aggregateException = ex as AggregateException;
 			if (aggregateException != null) {
 				aggregateException.Flatten ().Handle (innerEx => {
