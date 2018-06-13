@@ -27,6 +27,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
+using System.Text;
 
 namespace MonoDevelop.Core.Instrumentation
 {
@@ -37,8 +39,24 @@ namespace MonoDevelop.Core.Instrumentation
 		TimeSpan Duration { get; }
 	}
 	
-	class DummyTimerCounter: ITimeTracker
+	public interface ITimeTracker<T>: IDisposable, ITimeTracker where T : CounterMetadata
 	{
+		T Metadata { get; }
+	}
+
+	interface ITimeCounter: ITimeTracker
+	{
+		void AddHandlerTracker (IDisposable t);
+		TimerTraceList TraceList { get; }
+	}
+	
+	class DummyTimerCounter<T>: ITimeTracker<T> where T : CounterMetadata
+	{
+		public DummyTimerCounter (T metadata)
+		{
+			Metadata = metadata;
+		}
+
 		public void Trace (string message)
 		{
 		}
@@ -51,10 +69,12 @@ namespace MonoDevelop.Core.Instrumentation
 		{
 		}
 
+		public T Metadata { get; private set; }
+
 		public TimeSpan Duration { get; }
 	}
 	
-	class TimeCounter: ITimeTracker
+	class TimeCounter<T>: ITimeTracker<T>, ITimeCounter where T:CounterMetadata, new()
 	{
 		Stopwatch stopWatch = new Stopwatch ();
 		TimerTraceList traceList;
@@ -62,13 +82,33 @@ namespace MonoDevelop.Core.Instrumentation
 		TimerCounter counter;
 		object linkedTrackers;
 		long lastTraceTime;
+		T metadata;
+		CancellationToken cancellationToken;
 
-		internal TimeCounter (TimerCounter counter)
+		internal TimeCounter (TimerCounter counter, T metadata, CancellationToken cancellationToken)
 		{
 			this.counter = counter;
-			if (counter.Enabled)
+			this.metadata = metadata;
+			if (counter.Enabled || metadata != null) {
+				// Store metadata in the traces list. The corresponding CounterValue will get whatever
+				// metadata is assigned there
 				traceList = new TimerTraceList ();
+				traceList.Metadata = metadata?.Properties;
+			}
+			this.cancellationToken = cancellationToken;
 			Begin ();
+		}
+
+		public T Metadata {
+			get {
+				if (metadata == null) {
+					metadata = new T ();
+					if (traceList == null)
+						traceList = new TimerTraceList ();
+					traceList.Metadata = metadata.Properties;
+				}
+				return metadata;
+			}
 		}
 
 		public void AddHandlerTracker (IDisposable t)
@@ -83,7 +123,7 @@ namespace MonoDevelop.Core.Instrumentation
 				((List<IDisposable>)linkedTrackers).Add (t);
 		}
 		
-		internal TimerTraceList TraceList {
+		TimerTraceList ITimeCounter.TraceList {
 			get { return this.traceList; }
 		}
 		
@@ -100,7 +140,8 @@ namespace MonoDevelop.Core.Instrumentation
 					lastTrace = t;
 				}
 				traceList.TotalTime = t.Timestamp - traceList.FirstTrace.Timestamp;
-			} else {
+			}
+			if (counter.LogMessages) {
 				var time = stopWatch.ElapsedMilliseconds;
 				InstrumentationService.LogMessage (string.Format ("[{0} (+{1})] {2}", time, (time - lastTraceTime), message));
 				lastTraceTime = time;
@@ -121,6 +162,9 @@ namespace MonoDevelop.Core.Instrumentation
 
 			stopWatch.Stop ();
 			Duration = stopWatch.Elapsed;
+
+			if (metadata != null && cancellationToken != CancellationToken.None && cancellationToken.IsCancellationRequested)
+				metadata.Result = CounterResult.UserCancel;
 
 			if (counter.LogMessages) {
 				var time = stopWatch.ElapsedMilliseconds;
@@ -154,11 +198,32 @@ namespace MonoDevelop.Core.Instrumentation
 	}
 	
 	[Serializable]
+	[DebuggerDisplay ("{DebuggingText}")]
 	class TimerTraceList
 	{
 		public TimerTrace FirstTrace;
 		public TimeSpan TotalTime;
 		public int ValueIndex;
+
+		// Timer metadata is stored here, since it may change while the timer is alive.
+		// CounterValue will take the metadata from here.
+		public IDictionary<string, string> Metadata;
+
+		string DebuggingText {
+			get {
+				var stringBuilder = new StringBuilder ();
+				var current = FirstTrace;
+				TimerTrace previous = null;
+				while (current != null) {
+					stringBuilder.Append (previous == null ? "N/A" : (current.Timestamp - previous.Timestamp).ToString (@"ss\.fff"));
+					stringBuilder.Append (" : ");
+					stringBuilder.AppendLine (current.Message);
+					previous = current;
+					current = current.Next;
+				}
+				return stringBuilder.ToString ();
+			}
+		}
 	}
 	
 	[Serializable]

@@ -34,6 +34,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using AppKit;
+using CoreFoundation;
 using Foundation;
 using CoreGraphics;
 
@@ -55,6 +56,7 @@ using System.Diagnostics;
 using Xwt.Mac;
 using MonoDevelop.Components.Mac;
 using System.Reflection;
+using MacPlatform;
 
 namespace MonoDevelop.MacIntegration
 {
@@ -478,8 +480,8 @@ namespace MonoDevelop.MacIntegration
 				// and need to be updated recursively.
 				UpdateColorPanelSubviewsAppearance (colorPanel.ContentView.Superview, appearance);
 			};
-			
-			// FIXME: Immediate theme switching disabled, until NSAppearance issues are fixed 
+
+			// FIXME: Immediate theme switching disabled, until NSAppearance issues are fixed
 			//IdeApp.Preferences.UserInterfaceTheme.Changed += (s,a) => PatchGtkTheme ();
 		}
 
@@ -1031,7 +1033,7 @@ namespace MonoDevelop.MacIntegration
 				return base.GetIsFullscreen (window);
 			}
 
-			NSWindow nswin = GtkQuartz.GetWindow (window);
+			NSWindow nswin = window;
 			return (nswin.StyleMask & NSWindowStyle.FullScreenWindow) != 0;
 		}
 
@@ -1141,6 +1143,59 @@ namespace MonoDevelop.MacIntegration
 
 			proc.StartInfo = psi;
 			proc.Start ();
+		}
+
+		MacTelemetryDetails details;
+		internal override IPlatformTelemetryDetails PlatformTelemetryDetails ()
+		{
+			if (details == null) {
+				details = MacTelemetryDetails.CreateTelemetryDetails ();
+			}
+
+			return details;
+		}
+
+		internal override MemoryMonitor CreateMemoryMonitor () => new MacMemoryMonitor ();
+
+		internal class MacMemoryMonitor : MemoryMonitor, IDisposable
+		{
+			const MemoryPressureFlags notificationFlags = MemoryPressureFlags.Critical | MemoryPressureFlags.Warn | MemoryPressureFlags.Normal;
+			internal DispatchSource.MemoryPressure DispatchSource { get; private set; }
+
+			public MacMemoryMonitor ()
+			{
+				DispatchSource = new DispatchSource.MemoryPressure (notificationFlags, DispatchQueue.DefaultGlobalQueue);
+				DispatchSource.SetEventHandler (() => {
+					var platformMemoryStatus = GetPlatformMemoryStatus (DispatchSource.PressureFlags);
+					var args = new PlatformMemoryStatusEventArgs (platformMemoryStatus);
+					OnStatusChanged (args);
+				});
+				DispatchSource.Resume ();
+			}
+
+			static PlatformMemoryStatus GetPlatformMemoryStatus (MemoryPressureFlags flags)
+			{
+				switch (flags) {
+				case MemoryPressureFlags.Critical:
+					return PlatformMemoryStatus.Critical;
+				case MemoryPressureFlags.Warn:
+					return PlatformMemoryStatus.Low;
+				case MemoryPressureFlags.Normal:
+					return PlatformMemoryStatus.Normal;
+				default:
+					LoggingService.LogError ("Unknown MemoryPressureFlags value {0}", flags.ToString ());
+					return PlatformMemoryStatus.Normal;
+				}
+			}
+
+			public void Dispose ()
+			{
+				if (DispatchSource != null) {
+					DispatchSource.Cancel ();
+					DispatchSource.Dispose ();
+					DispatchSource = null;
+				}
+			}
 		}
 	}
 

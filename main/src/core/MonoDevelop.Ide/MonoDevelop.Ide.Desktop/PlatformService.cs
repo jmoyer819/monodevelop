@@ -13,10 +13,10 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -45,6 +45,7 @@ using MonoDevelop.Core.Execution;
 using MonoDevelop.Components;
 using MonoDevelop.Components.MainToolbar;
 using MonoDevelop.Ide.Composition;
+using System.Threading.Tasks;
 
 namespace MonoDevelop.Ide.Desktop
 {
@@ -52,7 +53,7 @@ namespace MonoDevelop.Ide.Desktop
 	{
 		Hashtable iconHash = new Hashtable ();
 		static readonly bool UsePlatformFileIcons = false;
-		
+
 		public abstract string DefaultMonospaceFont { get; }
 		public virtual string DefaultSansFont { get { return null; } }
 
@@ -85,12 +86,12 @@ namespace MonoDevelop.Ide.Desktop
 		{
 			Process.Start (filename);
 		}
-		
+
 		public virtual void OpenFolder (FilePath folderPath, FilePath[] selectFiles)
 		{
 			Process.Start (folderPath);
 		}
-		
+
 		public virtual void ShowUrl (string url)
 		{
 			Process.Start (url);
@@ -138,12 +139,12 @@ namespace MonoDevelop.Ide.Desktop
 			else
 				return OnGetMimeTypeDescription (mimeType) ?? string.Empty;
 		}
-		
+
 		public bool GetMimeTypeIsText (string mimeType)
 		{
 			return GetMimeTypeIsSubtype (mimeType, "text/plain");
 		}
-		
+
 		public bool GetMimeTypeIsSubtype (string subMimeType, string baseMimeType)
 		{
 			foreach (string mt in GetMimeTypeInheritanceChain (subMimeType))
@@ -151,11 +152,11 @@ namespace MonoDevelop.Ide.Desktop
 					return true;
 			return false;
 		}
-		
+
 		public IEnumerable<string> GetMimeTypeInheritanceChain (string mimeType)
 		{
 			yield return mimeType;
-			
+
 			while (mimeType != null && mimeType != "text/plain" && mimeType != "application/octet-stream") {
 				MimeTypeNode mt = FindMimeType (mimeType);
 				if (mt != null && !string.IsNullOrEmpty (mt.BaseType))
@@ -180,11 +181,11 @@ namespace MonoDevelop.Ide.Desktop
 			}
 			return null;
 		}
-		
+
 		public Xwt.Drawing.Image GetIconForFile (string filename)
 		{
 			Xwt.Drawing.Image pic = null;
-			
+
 			string icon = GetIconIdForFile (filename);
 			if (icon != null)
 				pic = ImageService.GetIcon (icon, false);
@@ -204,13 +205,13 @@ namespace MonoDevelop.Ide.Desktop
 			}
 			return pic ?? GetDefaultIcon ();
 		}
-		
+
 		public Xwt.Drawing.Image GetIconForType (string mimeType)
 		{
 			Xwt.Drawing.Image bf = (Xwt.Drawing.Image) iconHash [mimeType];
 			if (bf != null)
 				return bf;
-			
+
 			foreach (string type in GetMimeTypeInheritanceChain (mimeType)) {
 				// Try getting an icon name for the type
 				string icon = GetIconIdForType (type);
@@ -219,7 +220,7 @@ namespace MonoDevelop.Ide.Desktop
 					if (bf != null)
 						break;
 				}
-				
+
 				// Try getting a pixbuff
 				if (UsePlatformFileIcons) {
 					bf = OnGetIconForType (type);
@@ -227,7 +228,7 @@ namespace MonoDevelop.Ide.Desktop
 						break;
 				}
 			}
-			
+
 			if (bf == null)
 				bf = GetDefaultIcon ();
 
@@ -252,7 +253,7 @@ namespace MonoDevelop.Ide.Desktop
 			iconHash [id] = bf;
 			return bf;
 		}
-		
+
 		string GetIconIdForFile (string fileName)
 		{
 			MimeTypeNode mt = FindMimeTypeForFile (fileName);
@@ -261,7 +262,7 @@ namespace MonoDevelop.Ide.Desktop
 			else
 				return OnGetIconIdForFile (fileName);
 		}
-		
+
 		string GetIconIdForType (string type)
 		{
 			if (type == "text/plain")
@@ -321,7 +322,7 @@ namespace MonoDevelop.Ide.Desktop
 			}
 			return null;
 		}
-		
+
 		MimeTypeNode FindMimeType (string type)
 		{
 			foreach (MimeTypeNode mt in mimeTypeNodes) {
@@ -340,40 +341,40 @@ namespace MonoDevelop.Ide.Desktop
 		{
 			return null;
 		}
-		
+
 		protected virtual bool OnGetMimeTypeIsText (string mimeType)
 		{
 			return false;
 		}
-		
+
 		protected virtual string OnGetIconIdForFile (string filename)
 		{
 			return null;
 		}
-		
+
 		protected virtual string OnGetIconIdForType (string type)
 		{
 			return null;
 		}
-		
+
 		protected virtual Xwt.Drawing.Image OnGetIconForFile (string filename)
 		{
 			return null;
 		}
-		
+
 		protected virtual Xwt.Drawing.Image OnGetIconForType (string type)
 		{
 			return null;
 		}
-		
+
 		protected virtual string DefaultFileIconId {
 			get { return null; }
 		}
-		
+
 		protected virtual Xwt.Drawing.Image DefaultFileIcon {
 			get { return null; }
 		}
-		
+
 		public virtual bool SetGlobalMenu (MonoDevelop.Components.Commands.CommandManager commandManager,
 			string commandMenuAddinPath, string appMenuAddinPath)
 		{
@@ -389,7 +390,7 @@ namespace MonoDevelop.Ide.Desktop
 				return null;
 			return info.FileAccessPermissions;
 		}
-		
+
 		public virtual void SetFileAttributes (string fileName, object attributes)
 		{
 			if (attributes == null)
@@ -418,30 +419,30 @@ namespace MonoDevelop.Ide.Desktop
 		{
 			throw new InvalidOperationException ();
 		}
-		
+
 		protected virtual RecentFiles CreateRecentFilesProvider ()
 		{
 			return new FdoRecentFiles ();
 		}
-		
+
 		RecentFiles recentFiles;
 		public RecentFiles RecentFiles {
 			get {
 				return recentFiles ?? (recentFiles = CreateRecentFilesProvider ());
 			}
 		}
-		
+
 		public virtual string GetUpdaterUrl ()
 		{
 			return null;
 		}
-		
+
 		public virtual IEnumerable<string> GetUpdaterEnviromentFlags ()
 		{
 			return new string[0];
 		}
 
-		
+
 		/// <summary>
 		/// Starts the installer.
 		/// </summary>
@@ -457,12 +458,12 @@ namespace MonoDevelop.Ide.Desktop
 		public virtual void StartUpdatesInstaller (FilePath installerDataFile, FilePath updatedInstallerPath)
 		{
 		}
-		
+
 		public virtual IEnumerable<DesktopApplication> GetApplications (string filename)
 		{
 			return new DesktopApplication[0];
 		}
-		
+
 		public virtual Xwt.Rectangle GetUsableMonitorGeometry (int screenNumber, int monitorNumber)
 		{
 			var screen = Gdk.Display.Default.GetScreen (screenNumber);
@@ -475,7 +476,7 @@ namespace MonoDevelop.Ide.Desktop
 				Height = rect.Height,
 			};
 		}
-		
+
 		/// <summary>
 		/// Grab the desktop focus for the window.
 		/// </summary>
@@ -563,7 +564,7 @@ namespace MonoDevelop.Ide.Desktop
 				throw new Exception (path + " not found");
 
 			var proc = new Process ();
-				
+
 			var psi = new ProcessStartInfo (path) {
 				CreateNoWindow = true,
 				UseShellExecute = false,
@@ -573,7 +574,7 @@ namespace MonoDevelop.Ide.Desktop
 			var recentWorkspace = reopen ? DesktopService.RecentFiles.GetProjects ().FirstOrDefault ()?.FileName : string.Empty;
 			if (!string.IsNullOrEmpty (recentWorkspace))
 				psi.Arguments = recentWorkspace;
-			
+
 			proc.StartInfo = psi;
 			proc.Start ();
 		}
@@ -583,6 +584,17 @@ namespace MonoDevelop.Ide.Desktop
 		internal virtual string GetNativeRuntimeDescription ()
 		{
 			return null;
+		}
+
+		internal virtual IPlatformTelemetryDetails PlatformTelemetryDetails ()
+		{
+			return null;
+		}
+
+		internal virtual MemoryMonitor CreateMemoryMonitor () => new NullMemoryMonitor ();
+
+		internal class NullMemoryMonitor : MemoryMonitor
+		{
 		}
 	}
 

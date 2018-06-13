@@ -658,7 +658,7 @@ namespace Mono.TextEditor
 
 		void CommitString (string str)
 		{
-			if (!IsRealized || !IsFocus)
+			if (!IsRealized || !IsFocus || String.IsNullOrEmpty(str))
 				return;
 
 			for (int i = 0; i < str.Length; i++) {
@@ -1343,6 +1343,10 @@ namespace Mono.TextEditor
 			pressPositionX = e.X;
 			pressPositionY = e.Y;
 			base.IsFocus = true;
+
+			// If there is anything in the preedit buffer, commit it otherwise text
+			// selection may have the wrong offsets.
+			CommitPreedit ();
 			
 
 			if (lastTime != e.Time) {// filter double clicks
@@ -2232,7 +2236,7 @@ namespace Mono.TextEditor
 				foreach (var drawer in margin.MarginDrawer)
 					drawer.Draw (cr, cairoRectangle);
 			}
-			
+			LayoutChanged?.Invoke (this, EventArgs.Empty);
 			if (setLongestLine) 
 				SetHAdjustment ();
 		}
@@ -2284,9 +2288,7 @@ namespace Mono.TextEditor
 				
 				cr.LineWidth = Options.Zoom;
 				textViewCr.LineWidth = Options.Zoom;
-				textViewCr.Rectangle (textViewMargin.XOffset, 0, Allocation.Width - textViewMargin.XOffset, Allocation.Height);
-				textViewCr.Clip ();
-				
+
 				RenderMargins (cr, textViewCr, cairoArea);
 			
 #if DEBUG_EXPOSE
@@ -3578,6 +3580,7 @@ namespace Mono.TextEditor
 		}
 		
 		internal List<MonoTextEditor.EditorContainerChild> containerChildren = new List<MonoTextEditor.EditorContainerChild> ();
+		internal event EventHandler LayoutChanged;
 
 		public void AddTopLevelWidget (Gtk.Widget widget, int x, int y)
 		{
