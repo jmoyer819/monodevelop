@@ -15,6 +15,7 @@ namespace MonoDevelop.Ide.BuildOutputView
 		public static Xwt.Drawing.Color CellStrongSelectionColor { get; internal set; }
 		public static Xwt.Drawing.Color CellTextColor { get; internal set; }
 		public static Xwt.Drawing.Color CellTextSelectionColor { get; internal set; }
+		public static Xwt.Drawing.Color CellTextSkippedSelectionUnfocusedColor { get; internal set; }
 		public static Xwt.Drawing.Color CellTextSkippedColor { get; internal set; }
 		public static Xwt.Drawing.Color CellTextSkippedSelectionColor { get; internal set; }
 		public static Xwt.Drawing.Color LinkForegroundColor { get; internal set; }
@@ -63,31 +64,36 @@ namespace MonoDevelop.Ide.BuildOutputView
 			CellTextSelectionColor = Ide.Gui.Styles.BaseSelectionTextColor;
 			CellTextSkippedColor = Ide.Gui.Styles.SecondaryTextColor;
 			CellTextSkippedSelectionColor = Ide.Gui.Styles.SecondarySelectionTextColor;
-			LinkForegroundColor = Xwt.Drawing.Color.FromName ("#999999");
-			SearchMatchFocusedBackgroundColor = Xwt.Drawing.Color.FromName ("#fcff54");
+			CellTextSkippedSelectionUnfocusedColor = Color.FromName ("#ffffff");
+			LinkForegroundColor = Color.FromName ("#999999");
+			SearchMatchFocusedBackgroundColor = Color.FromName ("#fcff54");
 			CellTextSelectionColorSecundary = Colors.LightBlue;
 		}
 
-		public static Xwt.Drawing.Color GetTextColor (BuildOutputNode buildOutputNode, bool isSelected)
+		public static Color GetTextColor (BuildOutputNode buildOutputNode, bool isSelected, bool isFocused)
 		{
 			if (isSelected) {
 				if (buildOutputNode.NodeType == BuildOutputNodeType.TargetSkipped) {
-					return Styles.CellTextSkippedSelectionColor;
-				} else {
-					return Styles.CellTextSelectionColor;
-				}
-			} else {
-				if (buildOutputNode.NodeType == BuildOutputNodeType.TargetSkipped) {
-					return Styles.CellTextSkippedColor;
-				} else {
-					return Styles.CellTextColor;
-				}
+					if (isFocused) {
+						return CellTextSkippedSelectionUnfocusedColor;
+					}
+					return CellTextSkippedSelectionColor;
+				} 
+				return CellTextSelectionColor;
 			}
+
+			if (buildOutputNode.NodeType == BuildOutputNodeType.TargetSkipped) {
+				return CellTextSkippedColor;
+			}
+			return CellTextColor;
 		}
 
 		public static Color GetSearchMatchBackgroundColor (bool focused)
 		{
-			return focused ? Styles.SearchMatchFocusedBackgroundColor : Styles.SearchMatchUnfocusedBackgroundColor;
+			if (focused) {
+				return SearchMatchFocusedBackgroundColor;
+			}
+			return SearchMatchUnfocusedBackgroundColor;
 		}
 	}
 
@@ -383,7 +389,6 @@ namespace MonoDevelop.Ide.BuildOutputView
 					if (status.DrawsBottomLine) {
 						DrawBottomLine (ctx, Styles.CellErrorLineBackgroundColor);
 					}
-
 				} else if (buildOutputNode.NodeType == BuildOutputNodeType.Warning) {
 					FillCellBackground (ctx, Styles.CellWarningBackgroundColor);
 
@@ -425,6 +430,9 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 			var status = GetViewStatus (buildOutputNode);
 
+			var treeView = ParentWidget as TreeView;
+			var hasFocus = treeView?.HasFocus ?? false;
+
 			//Draw the node background
 			FillCellBackground (ctx, buildOutputNode, status);
 
@@ -441,9 +449,9 @@ namespace MonoDevelop.Ide.BuildOutputView
 			status.LastRenderLayoutBounds = layoutBounds;
 			status.LastRenderExpanderBounds = expanderRect;
 
-			ctx.SetColor (Styles.GetTextColor (buildOutputNode, UseStrongSelectionColor && isSelected));
+			ctx.SetColor (Styles.GetTextColor (buildOutputNode, UseStrongSelectionColor && isSelected, hasFocus));
 
-			HighlightSearchResults (layout, contextProvider.SearchString, Styles.GetTextColor (buildOutputNode, false), Styles.GetSearchMatchBackgroundColor (isSelected));
+			HighlightSearchResults (layout, contextProvider.SearchString, Styles.GetTextColor (buildOutputNode, false, hasFocus), Styles.GetSearchMatchBackgroundColor (isSelected));
 
 			// Render the selection
 			if (selectionRow == buildOutputNode && selectionStart != selectionEnd) {
@@ -746,8 +754,8 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 			//HACK: to avoid automatic scroll behaviour in Gtk (we handle the behaviour)
 			//we only want break the normal click behaviour of treeview, in cases when label size is bigger than tree height
-			var treeView = ((TreeView)ParentWidget);
-			if (status.Expanded && status.LastRenderBounds.Height > treeView.Size.Height) {
+			var treeView = ParentWidget as TreeView;
+			if (treeView != null && status.Expanded && status.LastRenderBounds.Height > treeView.Size.Height) {
 				args.Handled = true;
 				treeView.SelectRow (node);
 			}
