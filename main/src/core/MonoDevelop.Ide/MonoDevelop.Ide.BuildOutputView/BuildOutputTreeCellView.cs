@@ -499,10 +499,27 @@ namespace MonoDevelop.Ide.BuildOutputView
 				status.WarningsRectangle.Width = size.Width + ImageSize + 2;
 				status.WarningsRectangle.Height = size.Height;
 
+				//Right area // based in our DefaultInformationContainerWidth
+				startX = cellArea.X + (cellArea.Width - DefaultInformationContainerWidth);
+
+				//Draw of duration based in startX position
+				DrawNodeDuration (ctx, cellArea, buildOutputNode, startX, ImagePadding);
+
 			} else if (buildOutputNode.NodeType == BuildOutputNodeType.Build) {
 				var textStartX = layoutBounds.X + layout.GetSize ().Width + 24;
 				DrawText (ctx, cellArea, textStartX, GetInformationMessage (buildOutputNode), status.LayoutYPadding, defaultFont, cellArea.Width - textStartX);
 			}
+		}
+
+		double DrawNodeDuration (Context ctx, Rectangle cellArea, BuildOutputNode buildOutputNode, double textStartX, double padding)
+		{
+			//Duration text
+			var duration = buildOutputNode.GetDurationAsString (contextProvider.IsShowingDiagnostics);
+			if (duration != "") {
+				var size = DrawText (ctx, cellArea, textStartX, duration, padding, defaultFont, DefaultInformationContainerWidth).GetSize ();
+				textStartX += size.Width + 10;
+			}
+			return textStartX;
 		}
 
 		void DrawNodeInformation (Context ctx, Xwt.Rectangle cellArea, BuildOutputNode buildOutputNode, double padding, bool isSelected, int imageSize, int imagePadding, ViewStatus status)
@@ -536,16 +553,11 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 			UpdateInformationTextColor (ctx, isSelected);
 
+			//Right area // based in our DefaultInformationContainerWidth
 			var textStartX = cellArea.X + (cellArea.Width - DefaultInformationContainerWidth);
 
-			Size size = Size.Zero;
-
-			//Duration text
-			var duration = buildOutputNode.GetDurationAsString (contextProvider.IsShowingDiagnostics);
-			if (duration != "") {
-				size = DrawText (ctx, cellArea, textStartX, duration, padding, defaultFont, DefaultInformationContainerWidth).GetSize ();
-				textStartX += size.Width + 10;
-			}
+			//Draws the node duration based in initial X
+			textStartX = DrawNodeDuration (ctx, cellArea, buildOutputNode, textStartX, padding);
 
 			if (textStartX > lastErrorPanelStartX) {
 				lastErrorPanelStartX = textStartX;
