@@ -1,4 +1,4 @@
-﻿//
+//
 // CaretImpl.ITextCaret.cs
 //
 // Author:
@@ -221,9 +221,15 @@ namespace Mono.TextEditor
 			int col;
 			if (bufferPosition.IsInVirtualSpace) {
 				col = bufferPosition.VirtualSpaces;
+
+				if (!TextEditor.Options.TabsToSpaces) {
+					col = col / TextEditor.Options.TabSize;
+				}
 			} else {
-				col = requestedPosition - snapshotLine.Start + 1;
+				col = requestedPosition - snapshotLine.Start;
 			}
+
+			col += 1;
 
 			TextEditor.SetCaretTo (line, col, false, false);
 		}
