@@ -104,6 +104,7 @@ namespace MonoDevelop.Ide.BuildOutputView
 		public static readonly Xwt.Drawing.Image WarningIcon = ImageService.GetIcon (Ide.Gui.Stock.BuildWarning, Gtk.IconSize.Menu);
 		public static readonly Xwt.Drawing.Image WarningIconSmall = ImageService.GetIcon (Ide.Gui.Stock.BuildWarningSmall, Gtk.IconSize.Menu);
 		public static readonly Xwt.Drawing.Image FolderIcon = ImageService.GetIcon (Ide.Gui.Stock.OpenFolder, Gtk.IconSize.Menu);
+		public static readonly Xwt.Drawing.Image EmptyIcon = ImageService.GetIcon (Ide.Gui.Stock.Empty);
 	}
 
 	enum TextSelectionState
@@ -165,10 +166,8 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 	class BuildOutputTreeCellView : CanvasCellView
 	{
-		static readonly Image BuildExpandIcon = ImageService.GetIcon (Ide.Gui.Stock.BuildExpand, Gtk.IconSize.Menu).WithSize (16);
-		static readonly Image BuildCollapseIcon = ImageService.GetIcon (Ide.Gui.Stock.BuildCollapse, Gtk.IconSize.Menu).WithSize (16);
-		static readonly Image BuildExpandIconSel = BuildExpandIcon.WithStyles ("sel");
-		static readonly Image BuildCollapseIconSel = BuildCollapseIcon.WithStyles ("sel");
+		static readonly Image BuildExpandIcon = ImageService.GetIcon (Ide.Gui.Stock.BuildExpand, Gtk.IconSize.Menu).WithSize (10);
+		static readonly Image BuildCollapseIcon = ImageService.GetIcon (Ide.Gui.Stock.BuildCollapse, Gtk.IconSize.Menu).WithSize (10);
 
 		public EventHandler<BuildOutputNode> GoToTask;
 		public EventHandler<BuildOutputNode> ExpandErrors;
@@ -185,6 +184,7 @@ namespace MonoDevelop.Ide.BuildOutputView
 			public double CollapsedRowHeight = -1;
 			public double CollapsedLayoutHeight = -1;
 			public double LayoutYPadding = 0;
+			public double ExpanderYPadding = 0;
 			public int NewLineCharIndex = -1;
 
 			public Rectangle TaskLinkRenderRectangle = Rectangle.Zero;
@@ -224,34 +224,37 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 				expanderRect = Rectangle.Zero;
 				layoutBounds = cellArea;
-				layoutBounds.X += ImageSize + ImagePadding;
+
+				int startX = ImageSize + ImagePadding;
+				layoutBounds.X += startX;
 				layoutBounds.Width -= ImagePadding + DefaultInformationContainerWidth;
 
 				textLayout = GetUnconstrainedLayout ();
 				var textSize = textLayout.GetSize ();
 
 				if (textSize.Width > layoutBounds.Width || NewLineCharIndex > -1) {
-					layoutBounds.Width -= (ImageSize + ImagePadding);
+
+					layoutBounds.Width -= startX;
 					layoutBounds.Width = Math.Max (MinLayoutWidth, layoutBounds.Width);
 					textLayout.Width = layoutBounds.Width;
 					textLayout.Height = Expanded ? -1 : cellArea.Height;
 
 					textSize = textLayout.GetSize ();
 
-					var expanderX = layoutBounds.Right + ImagePadding;
+					var expanderX = layoutBounds.Left - startX;
 					if (expanderX > 0)
-						expanderRect = new Rectangle (expanderX, cellArea.Y + ((CollapsedLayoutHeight - BuildExpandIcon.Height) * .5), BuildExpandIcon.Width, BuildExpandIcon.Height);
+						expanderRect = new Rectangle (expanderX, cellArea.Y, ImageSize, ImageSize);
 				}
 
 				layoutBounds.Height = textSize.Height;
 				layoutBounds.Y += LayoutYPadding;
-				expanderRect.Y += LayoutYPadding;
+				expanderRect.Y += ExpanderYPadding;
 
 				// check that the text still fits into the cell
 				if (!cellArea.Contains (layoutBounds))
 					return false; // resize required
 								  // if the cell is too large, we need to resize it
-				else if (Expanded && Math.Abs (layoutBounds.Height - LayoutYPadding - cellArea.Height) > 1)
+				if (Expanded && Math.Abs (layoutBounds.Height - LayoutYPadding - cellArea.Height) > 1)
 					return false; // resize required
 				return true;
 			}
@@ -260,11 +263,14 @@ namespace MonoDevelop.Ide.BuildOutputView
 
 			public bool IsRootNode => Node.Parent == null;
 
+			readonly public Image Icon;
+
 			public ViewStatus (BuildOutputNode node)
 			{
 				if (node == null)
 					throw new ArgumentNullException (nameof (node));
 				Node = node;
+				Icon = Node.GetImage ();
 				layout.Font = GetFont (node);
 			}
 
@@ -298,6 +304,7 @@ namespace MonoDevelop.Ide.BuildOutputView
 						CollapsedLayoutHeight = textSize.Height;
 						CollapsedRowHeight = Math.Max (textSize.Height, ImageSize);
 						LayoutYPadding = (CollapsedRowHeight - CollapsedLayoutHeight) * .5;
+						ExpanderYPadding = (CollapsedRowHeight - BuildExpandIcon.Height) * .5;
 					}
 				}
 				layout.Trimming = Expanded ? TextTrimming.Word : TextTrimming.WordElipsis;
@@ -310,6 +317,8 @@ namespace MonoDevelop.Ide.BuildOutputView
 			}
 
 			internal string Duration { get; private set; }
+
+			public bool HasIcon => Icon != Resources.EmptyIcon;
 
 			internal void Initialize (bool isShowingDiagnostics)
 			{
@@ -461,15 +470,16 @@ namespace MonoDevelop.Ide.BuildOutputView
 		protected override void OnDraw(Context ctx, Xwt.Rectangle cellArea)
 		{
 			var buildOutputNode = GetValue (BuildOutputNodeField);
-			var isSelected = Selected;
-
 			var status = GetViewStatus (buildOutputNode);
+			var isSelected = Selected;
 
 			//Draw the node background
 			FillCellBackground (ctx, buildOutputNode, status);
 
-			//Draw the image row
-			DrawImage (ctx, cellArea, buildOutputNode.GetImage (), cellArea.Left, ImageSize, isSelected, ImagePadding);
+			if (status.HasIcon) {
+				//Draw the image row
+				DrawImage (ctx, cellArea, status.Icon, cellArea.Left, ImageSize, isSelected, ImagePadding);
+			}
 
 			// If the height required by the text is not the same as what was calculated in OnGetRequiredSize(), it means that
 			// the required height has changed and CalcLayout will return false. In that case call QueueResize(),
@@ -498,9 +508,9 @@ namespace MonoDevelop.Ide.BuildOutputView
 				// Draw the image
 				Image icon;
 				if (status.Expanded)
-					icon = isSelected ? BuildCollapseIconSel : BuildCollapseIcon;
+					icon = BuildCollapseIcon;
 				else
-					icon = isSelected ? BuildExpandIconSel : BuildExpandIcon;
+					icon = BuildExpandIcon;
 				ctx.DrawImage (icon, expanderRect.X, expanderRect.Y);
 			}
 

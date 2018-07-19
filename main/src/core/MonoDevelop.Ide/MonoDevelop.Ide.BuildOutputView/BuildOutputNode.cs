@@ -110,7 +110,6 @@ namespace MonoDevelop.Ide.BuildOutputView
 			return child;
 		}
 
-
 		public Xwt.Drawing.Image GetImage ()
 		{
 			switch (NodeType) {
@@ -132,8 +131,7 @@ namespace MonoDevelop.Ide.BuildOutputView
 			case BuildOutputNodeType.Warning:
 				return Resources.WarningIconSmall;
 			}
-			LoggingService.LogDebug ("Icon not found for node: {0}", NodeType.ToString ());
-			return ImageService.GetIcon (Ide.Gui.Stock.Empty);
+			return Resources.EmptyIcon;
 		}
 
 		public BuildOutputNode FindChild (string message)
